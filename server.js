@@ -12,20 +12,20 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-/* ペイロードをデコードしてサーバーベースとターゲットURLを復元する関数 */
+/* バイト単位での正確なデコードおよびXOR復元関数 */
 function decodeSecureTunnelPayload(encodedStr) {
   try {
-    let b1 = Buffer.from(encodedStr, 'base64').toString('utf8');
-    let b2 = Buffer.from(b1, 'base64').toString('utf8');
-    let scrambled = Buffer.from(b2, 'base64').toString('utf8');
+    let b1 = Buffer.from(encodedStr, 'base64').toString('binary');
+    let b2 = Buffer.from(b1, 'base64').toString('binary');
+    let decodedBinary = Buffer.from(b2, 'base64').toString('binary');
 
     const secretKey = 0xA5;
-    let decodedCombined = '';
-    for (let i = 0; i < scrambled.length; i++) {
-      decodedCombined += String.fromCharCode(scrambled.charCodeAt(i) ^ secretKey);
+    let decryptedBytes = Buffer.alloc(decodedBinary.length);
+    for (let i = 0; i < decodedBinary.length; i++) {
+      decryptedBytes[i] = decodedBinary.charCodeAt(i) ^ secretKey;
     }
 
-    // デバッグ用：何が復元されたかログに出力
+    const decodedCombined = decryptedBytes.toString('utf8');
     console.log("Decoded Combined String:", decodedCombined);
 
     const parts = decodedCombined.split('|');
@@ -48,15 +48,13 @@ app.all('/secure-tunnel/:payload', async (req, res) => {
   const decodedData = decodeSecureTunnelPayload(encodedPayload);
 
   if (!decodedData || !decodedData.targetUrl) {
-    console.error("Failed to decode payload or missing targetUrl");
     return res.status(400).send('Invalid or corrupted tunnel payload.');
   }
 
   const targetUrl = decodedData.targetUrl.trim();
-  console.log("Resolved Target URL:", targetUrl);
 
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-    console.error("URL format error. Does not start with http:// or https:// ->", targetUrl);
+    console.error("URL format error ->", targetUrl);
     return res.status(400).send('Invalid target URL format.');
   }
 
