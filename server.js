@@ -1,92 +1,99 @@
 const express = require('express');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// GAS側と完全に同期させた複合化・復元関数
-function secureTunnelDecrypt(encryptedToken) {
-    try {
-        const secretKey = 0x5A;
-        // 2回分のBase64を解除
-        let decoded = Buffer.from(Buffer.from(encryptedToken, 'base64').toString('utf8'), 'base64').toString('utf8');
-        let original = '';
-        for (let i = 0; i < decoded.length; i++) {
-            original += String.fromCharCode(decoded.charCodeAt(i) ^ secretKey);
-        }
-        return original;
-    } catch (e) {
-        return null;
+app.use(cors());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+/* クライアント側で結合・暗号化されたペイロードを完全に解凍してサーバーベースとURLを復元する関数 */
+function decodeSecureTunnelPayload(encodedStr) {
+  try {
+    // 三重のBase64デコード
+    let b1 = Buffer.from(encodedStr, 'base64').toString('utf8');
+    let b2 = Buffer.from(b1, 'base64').toString('utf8');
+    let scrambled = Buffer.from(b2, 'base64').toString('utf8');
+
+    // XOR解読 (secretKey = 0xA5)
+    const secretKey = 0xA5;
+    let decodedCombined = '';
+    for (let i = 0; i < scrambled.length; i++) {
+      decodedCombined += String.fromCharCode(scrambled.charCodeAt(i) ^ secretKey);
     }
+
+    // 「サーバーベース|ターゲットURL」形式に分割
+    const parts = decodedCombined.split('|');
+    if (parts.length >= 2) {
+      return {
+        serverBase: parts[0],
+        targetUrl: parts.slice(1).join('|') // 万が一URL内に「|」が含まれていた場合の対策
+      };
+    }
+    return { serverBase: null, targetUrl: decodedCombined };
+  } catch (e) {
+    console.error("Payload decoding error:", e);
+    return null;
+  }
 }
 
-app.use('/proxy/:secureToken', (req, res, next) => {
-    const targetUrl = secureTunnelDecrypt(req.params.secureToken);
+/* セキュアトンネルのエンドポイント */
+app.all('/secure-tunnel/:payload', async (req, res) => {
+  const encodedPayload = req.params.payload;
+  const decodedData = decodeSecureTunnelPayload(encodedPayload);
 
-    if (!targetUrl || (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://'))) {
-        return res.status(400).send('トンネル認証エラーまたは無効な暗号化トークンです');
+  if (!decodedData || !decodedData.targetUrl) {
+    return res.status(400).send('Invalid or corrupted tunnel payload.');
+  }
+
+  const targetUrl = decodedData.targetUrl;
+
+  if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+    return res.status(400).send('Invalid target URL format.');
+  }
+
+  try {
+    // 外部サイトからのブロックや拡張機能による遮断を回避するための擬似ヘッダー
+    const response = await axios({
+      method: req.method,
+      url: targetUrl,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      data: req.body,
+      responseType: 'arraybuffer',
+      validateStatus: () => true,
+      maxRedirects: 5
+    });
+
+    // レスポンスヘッダーを引き継ぎ
+    const contentType = response.headers['content-type'] || 'text/html';
+    res.setHeader('Content-Type', contentType);
+
+    // HTMLの場合、正常に描画させる
+    if (contentType.includes('text/html')) {
+      let html = response.data.toString('utf8');
+      const $ = cheerio.load(html);
+      return res.send($.html());
     }
 
-    const targetParsed = new URL(targetUrl);
+    return res.send(response.data);
 
-    createProxyMiddleware({
-        target: targetUrl,
-        changeOrigin: true,
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
-            'Accept-Encoding': 'identity',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-            'Referer': targetParsed.origin + '/'
-        },
-        router: (req) => targetUrl,
-        pathRewrite: {
-            '^/proxy/[^/]+': '',
-        },
-        onProxyReq: (proxyReq, req, res) => {
-            proxyReq.setHeader('X-Forwarded-For', req.ip);
-            proxyReq.setHeader('Origin', targetParsed.origin);
-            proxyReq.removeHeader('Accept-Encoding');
-            proxyReq.setHeader('Accept-Encoding', 'identity');
-        },
-        onProxyRes: (proxyRes, req, res) => {
-            delete proxyRes.headers['x-frame-options'];
-            delete proxyRes.headers['content-security-policy'];
-            delete proxyRes.headers['x-content-type-options'];
-            delete proxyRes.headers['strict-transport-security'];
-            delete proxyRes.headers['permissions-policy'];
-
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-            res.setHeader('Access-Control-Allow-Headers', '*');
-
-            if (proxyRes.headers['set-cookie']) {
-                proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map(cookie => {
-                    return cookie.replace(/;\s*Secure/gi, '').replace(/;\s*SameSite=[^\;]+/gi, '; SameSite=None; Secure');
-                });
-            }
-
-            if (proxyRes.headers['location']) {
-                try {
-                    let redirectUrl = new URL(proxyRes.headers['location'], targetUrl).toString();
-                    // リダイレクト先も同様に暗号化トンネル内にラップする
-                    let secretKey = 0x5A;
-                    let xored = '';
-                    for (let i = 0; i < redirectUrl.length; i++) {
-                        xored += String.fromCharCode(redirectUrl.charCodeAt(i) ^ secretKey);
-                    }
-                    let reEncrypted = Buffer.from(Buffer.from(xored).toString('base64')).toString('base64');
-                    proxyRes.headers['location'] = '/proxy/' + reEncrypted;
-                } catch (e) {}
-            }
-        },
-        onError: (err, req, res) => {
-            res.status(500).send('プロキシトンネル通信エラー: ' + err.message);
-        }
-    })(req, res, next);
+  } catch (error) {
+    console.error("Proxy tunnel error:", error.message);
+    res.status(500).send('Failed to fetch the target URL through the secure tunnel.');
+  }
 });
 
 app.listen(PORT, () => {
-    console.log(`最強プロキシトンネルサーバー起動: http://localhost:${PORT}`);
+  console.log(`Secure Tunnel Proxy Server running on port ${PORT}`);
 });
