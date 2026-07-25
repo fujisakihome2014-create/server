@@ -12,27 +12,27 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-/* クライアント側で結合・暗号化されたペイロードを完全に解凍してサーバーベースとURLを復元する関数 */
+/* ペイロードをデコードしてサーバーベースとターゲットURLを復元する関数 */
 function decodeSecureTunnelPayload(encodedStr) {
   try {
-    // 三重のBase64デコード
     let b1 = Buffer.from(encodedStr, 'base64').toString('utf8');
     let b2 = Buffer.from(b1, 'base64').toString('utf8');
     let scrambled = Buffer.from(b2, 'base64').toString('utf8');
 
-    // XOR解読 (secretKey = 0xA5)
     const secretKey = 0xA5;
     let decodedCombined = '';
     for (let i = 0; i < scrambled.length; i++) {
       decodedCombined += String.fromCharCode(scrambled.charCodeAt(i) ^ secretKey);
     }
 
-    // 「サーバーベース|ターゲットURL」形式に分割
+    // デバッグ用：何が復元されたかログに出力
+    console.log("Decoded Combined String:", decodedCombined);
+
     const parts = decodedCombined.split('|');
     if (parts.length >= 2) {
       return {
         serverBase: parts[0],
-        targetUrl: parts.slice(1).join('|') // 万が一URL内に「|」が含まれていた場合の対策
+        targetUrl: parts.slice(1).join('|')
       };
     }
     return { serverBase: null, targetUrl: decodedCombined };
@@ -48,17 +48,19 @@ app.all('/secure-tunnel/:payload', async (req, res) => {
   const decodedData = decodeSecureTunnelPayload(encodedPayload);
 
   if (!decodedData || !decodedData.targetUrl) {
+    console.error("Failed to decode payload or missing targetUrl");
     return res.status(400).send('Invalid or corrupted tunnel payload.');
   }
 
-  const targetUrl = decodedData.targetUrl;
+  const targetUrl = decodedData.targetUrl.trim();
+  console.log("Resolved Target URL:", targetUrl);
 
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+    console.error("URL format error. Does not start with http:// or https:// ->", targetUrl);
     return res.status(400).send('Invalid target URL format.');
   }
 
   try {
-    // 外部サイトからのブロックや拡張機能による遮断を回避するための擬似ヘッダー
     const response = await axios({
       method: req.method,
       url: targetUrl,
@@ -75,11 +77,9 @@ app.all('/secure-tunnel/:payload', async (req, res) => {
       maxRedirects: 5
     });
 
-    // レスポンスヘッダーを引き継ぎ
     const contentType = response.headers['content-type'] || 'text/html';
     res.setHeader('Content-Type', contentType);
 
-    // HTMLの場合、正常に描画させる
     if (contentType.includes('text/html')) {
       let html = response.data.toString('utf8');
       const $ = cheerio.load(html);
