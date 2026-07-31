@@ -12,50 +12,18 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-/* バイト単位での正確なデコードおよびXOR復元関数 */
-function decodeSecureTunnelPayload(encodedStr) {
-  try {
-    let b1 = Buffer.from(encodedStr, 'base64').toString('binary');
-    let b2 = Buffer.from(b1, 'base64').toString('binary');
-    let decodedBinary = Buffer.from(b2, 'base64').toString('binary');
+/* GASからのリクエストを受け付ける /proxy エンドポイント */
+app.all('/proxy', async (req, res) => {
+  // クエリパラメータから対象のURLを取得
+  const targetUrl = req.query.url;
 
-    const secretKey = 0xA5;
-    let decryptedBytes = Buffer.alloc(decodedBinary.length);
-    for (let i = 0; i < decodedBinary.length; i++) {
-      decryptedBytes[i] = decodedBinary.charCodeAt(i) ^ secretKey;
-    }
-
-    const decodedCombined = decryptedBytes.toString('utf8');
-    console.log("Decoded Combined String:", decodedCombined);
-
-    const parts = decodedCombined.split('|');
-    if (parts.length >= 2) {
-      return {
-        serverBase: parts[0],
-        targetUrl: parts.slice(1).join('|')
-      };
-    }
-    return { serverBase: null, targetUrl: decodedCombined };
-  } catch (e) {
-    console.error("Payload decoding error:", e);
-    return null;
+  if (!targetUrl) {
+    return res.status(400).send('URLパラメータが指定されていません。');
   }
-}
-
-/* セキュアトンネルのエンドポイント */
-app.all('/secure-tunnel/:payload', async (req, res) => {
-  const encodedPayload = req.params.payload;
-  const decodedData = decodeSecureTunnelPayload(encodedPayload);
-
-  if (!decodedData || !decodedData.targetUrl) {
-    return res.status(400).send('Invalid or corrupted tunnel payload.');
-  }
-
-  const targetUrl = decodedData.targetUrl.trim();
 
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
     console.error("URL format error ->", targetUrl);
-    return res.status(400).send('Invalid target URL format.');
+    return res.status(400).send('無効なURL形式です。');
   }
 
   try {
@@ -63,7 +31,7 @@ app.all('/secure-tunnel/:payload', async (req, res) => {
       method: req.method,
       url: targetUrl,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
         'Cache-Control': 'no-cache',
@@ -75,6 +43,7 @@ app.all('/secure-tunnel/:payload', async (req, res) => {
       maxRedirects: 5
     });
 
+    // レスポンスのヘッダーを引き継ぐ
     const contentType = response.headers['content-type'] || 'text/html';
     res.setHeader('Content-Type', contentType);
 
@@ -87,11 +56,16 @@ app.all('/secure-tunnel/:payload', async (req, res) => {
     return res.send(response.data);
 
   } catch (error) {
-    console.error("Proxy tunnel error:", error.message);
-    res.status(500).send('Failed to fetch the target URL through the secure tunnel.');
+    console.error("Proxy error:", error.message);
+    res.status(500).send('対象URLの取得に失敗しました: ' + error.message);
   }
 });
 
+/* 動作確認用のルート */
+app.get('/', (req, res) => {
+  res.send('Proxy Server is running!');
+});
+
 app.listen(PORT, () => {
-  console.log(`Secure Tunnel Proxy Server running on port ${PORT}`);
+  console.log(`Proxy Server running on port ${PORT}`);
 });
