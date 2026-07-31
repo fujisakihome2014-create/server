@@ -6,11 +6,10 @@ const URL = require('url').URL;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 1. メインのHTML取得・パス書き換えエンドポイント
 app.get('/fetch', async (req, res) => {
   const targetUrl = req.query.url;
-  if (!targetUrl) {
-    return res.status(400).send('URLが指定されていません。');
-  }
+  if (!targetUrl) return res.status(400).send('URLが指定されていません。');
 
   try {
     const response = await fetch(targetUrl, {
@@ -22,11 +21,11 @@ app.get('/fetch', async (req, res) => {
     });
 
     if (!response.ok) {
-      return res.status(response.status).send(`ターゲットサイトからの応答エラー: ${response.statusText}`);
+      return res.status(response.status).send(`ターゲットサイトエラー: ${response.statusText}`);
     }
 
     const contentType = response.headers.get('content-type') || '';
-    
+
     if (contentType.includes('text/html')) {
       let html = await response.text();
       const $ = cheerio.load(html);
@@ -34,62 +33,94 @@ app.get('/fetch', async (req, res) => {
       const baseOrigin = parsedTarget.origin;
       const basePath = parsedTarget.pathname.substring(0, parsedTarget.pathname.lastIndexOf('/') + 1);
 
-      // 通常のリソース（画像・CSSなど）用パス変換
+      // 絶対パスに変換するヘルパー
       const makeAbsolute = (link) => {
         if (!link || link.startsWith('data:') || link.startsWith('blob:') || link.startsWith('javascript:') || link.startsWith('#')) {
           return link;
         }
         try {
-          if (link.startsWith('http://') || link.startsWith('https://')) {
-            return link;
-          }
-          if (link.startsWith('/')) {
-            return `${baseOrigin}${link}`;
-          }
+          if (link.startsWith('http://') || link.startsWith('https://')) return link;
+          if (link.startsWith('/')) return `${baseOrigin}${link}`;
           return new URL(link, baseOrigin + basePath).href;
         } catch (e) {
           return link;
         }
       };
 
-      // src などのアセットは通常の絶対パスへ変換
+      // 画像やCSSなどのアセットは、Renderの /proxy-asset 経由に書き換える
+      const wrapProxy = (link) => {
+        const abs = makeAbsolute(link);
+        if (!abs || abs.startsWith('data:') || abs.startsWith('javascript:')) return abs;
+        return `/proxy-asset?url=${encodeURIComponent(abs)}`;
+      };
+
+      // src (画像・スクリプト等) を中継経由に変換
       $('[src]').each((i, el) => {
-        const src = $(el).attr('src');
-        $(el).attr('src', makeAbsolute(src));
+        $(el).attr('src', wrapProxy($(el).attr('src')));
       });
 
-      $('[action]').each((i, el) => {
-        const action = $(el).attr('action');
-        $(el).attr('action', makeAbsolute(action));
+      // style属性内の background-image などの url() も必要に応じてケアしつつ、link要素のCSSはラップ
+      $('link[rel="stylesheet"]').each((i, el) => {
+        const href = $(el).attr('href');
+        if (href) $(el).attr('href', wrapProxy(href));
       });
 
-      // href リンクは「プロキシ経由（/fetch?url=...）」に書き換える
+      // <a> などのリンクは、再び Render の /fetch 経由（iframe内遷移）に変換
       $('[href]').each((i, el) => {
         const href = $(el).attr('href');
-        if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
-          return;
+        if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+        const abs = makeAbsolute(href);
+        if (abs.startsWith('http://') || abs.startsWith('https://')) {
+          $(el).attr('href', `/fetch?url=${encodeURIComponent(abs)}`);
         }
-        const absoluteUrl = makeAbsolute(href);
-        // 外部のウェブページ遷移のみプロキシを通す
-        if (absoluteUrl.startsWith('http://') || absoluteUrl.startsWith('https://')) {
-          $(el).attr('href', `/fetch?url=${encodeURIComponent(absoluteUrl)}`);
+      });
+
+      // フォームの送信先もプロキシ経由にする
+      $('[action]').each((i, el) => {
+        const action = $(el).attr('action');
+        if (action) {
+          const abs = makeAbsolute(action);
+          if (abs.startsWith('http://') || abs.startsWith('https://')) {
+            $(el).attr('action', `/fetch?url=${encodeURIComponent(abs)}`);
+          }
         }
       });
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.send($.html());
     } else {
+      // HTML以外が直接リクエストされた場合
       const buffer = await response.buffer();
       res.setHeader('Content-Type', contentType);
       return res.send(buffer);
     }
-
   } catch (err) {
-    console.error(err);
-    res.status(500).send(`プロキシサーバーエラー: ${err.message}`);
+    res.status(500).send(`プロキシエラー: ${err.message}`);
+  }
+});
+
+// 2. 画像やCSSなどの静的ファイルを安全に中継するエンドポイント
+app.get('/proxy-asset', async (req, res) => {
+  const assetUrl = req.query.url;
+  if (!assetUrl) return res.status(400).send('URL未指定');
+
+  try {
+    const response = await fetch(assetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': new URL(assetUrl).origin
+      },
+      redirect: 'follow'
+    });
+
+    const buffer = await response.buffer();
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/octet-stream');
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).send('Asset proxy error');
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Proxy server is running on port ${PORT}`);
+  console.log(`Proxy server running on port ${PORT}`);
 });
