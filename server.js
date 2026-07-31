@@ -14,7 +14,6 @@ app.use(express.json());
 
 /* GASからのリクエストを受け付ける /proxy エンドポイント */
 app.all('/proxy', async (req, res) => {
-  // クエリパラメータから対象のURLを取得
   const targetUrl = req.query.url;
 
   if (!targetUrl) {
@@ -22,7 +21,6 @@ app.all('/proxy', async (req, res) => {
   }
 
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-    console.error("URL format error ->", targetUrl);
     return res.status(400).send('無効なURL形式です。');
   }
 
@@ -43,7 +41,6 @@ app.all('/proxy', async (req, res) => {
       maxRedirects: 5
     });
 
-    // レスポンスのヘッダーを引き継ぐ
     const contentType = response.headers['content-type'] || 'text/html';
     res.setHeader('Content-Type', contentType);
 
