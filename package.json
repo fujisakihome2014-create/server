@@ -1,12 +1,16 @@
 {
-  "name": "proxy-server",
+  "name": "uv-proxy-server",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
-  "dependencies": {
-    "express": "^4.18.2",
-    "node-fetch": "^2.6.7"
-  },
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@mercuryworkshop/bare-mux": "^2.0.3",
+    "@mercuryworkshop/epoxy-transport": "^2.1.3",
+    "@titaniumnetwork-dev/ultraviolet": "^3.2.6",
+    "express": "^4.18.2",
+    "wisp-server-node": "^1.1.3"
   }
 }
