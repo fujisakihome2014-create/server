@@ -1,49 +1,30 @@
-import express from 'express';
-const app = express();
-const PORT = process.env.PORT || 10000;
+import express from "express";
+import { createServer } from "node:http";
+import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { wisp } from "wisp-server-node";
 
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', '*');
-    if (req.method === 'OPTIONS') return res.sendStatus(200);
-    next();
+const __dirname = join(fileURLToPath(import.meta.url), "..");
+const app = express();
+
+// publicフォルダを静的配信
+app.use(express.static(join(__dirname, "public")));
+// UVのクライアントファイルを配信
+app.use("/uv/", express.static(uvPath));
+
+const server = createServer();
+server.on("request", (req, res) => {
+    app(req, res);
 });
 
-app.get('/proxy', async (req, res) => {
-    const targetUrl = req.query.url;
-    if (!targetUrl) return res.status(400).send('URL required');
-
-    try {
-        const response = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            },
-            redirect: 'follow'
-        });
-
-        const body = await response.text();
-        const contentType = response.headers.get('content-type') || 'text/html';
-
-        let modifiedBody = body;
-        if (contentType.includes('text/html')) {
-            const baseTag = `<base href="${targetUrl}">`;
-            if (modifiedBody.includes('<head>')) {
-                modifiedBody = modifiedBody.replace('<head>', `<head>${baseTag}`);
-            } else if (modifiedBody.includes('<HEAD>')) {
-                modifiedBody = modifiedBody.replace('<HEAD>', `<HEAD>${baseTag}`);
-            } else {
-                modifiedBody = baseTag + modifiedBody;
-            }
-        }
-
-        res.set('Content-Type', contentType);
-        res.send(modifiedBody);
-    } catch (err) {
-        res.status(500).send('Proxy Error: ' + err.message);
+server.on("upgrade", (req, socket, head) => {
+    if (req.url.endsWith("/wisp/")) {
+        wisp.routeRequest(req, socket, head);
+    } else {
+        socket.end();
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
