@@ -1,1 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>UV Proxy Client</title>
+    <script src="/uv/uv.bundle.js"></script>
+    <script src="/uv/uv.config.js"></script>
+</head>
+<body>
+    <input id="url" placeholder="URLを入力" style="width: 300px; padding: 8px;" />
+    <button onclick="go()" style="padding: 8px 16px;">GO</button>
+    <script>
+        const connection = window.SharedWorker ? new SharedWorker('/sw.js') : null;
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
+        }
 
+        function go() {
+            let url = document.getElementById('url').value.trim();
+            if (!url) return;
+            if (!url.startsWith('http')) url = 'https://' + url;
+            
+            location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
+        }
+    </script>
+</body>
+</html>
