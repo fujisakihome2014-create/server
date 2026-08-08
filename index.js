@@ -3,14 +3,13 @@ import { createServer } from "node:http";
 import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { wisp } from "wisp-server-node";
+import pkg from "wisp-server-node";
+const { wisp } = pkg;
 
 const __dirname = join(fileURLToPath(import.meta.url), "..");
 const app = express();
 
-// publicフォルダを静的配信
 app.use(express.static(join(__dirname, "public")));
-// UVのクライアントファイルを配信
 app.use("/uv/", express.static(uvPath));
 
 const server = createServer();
