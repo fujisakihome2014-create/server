@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer } from "node:http";
+import { publicPath } from "ultraviolet-static";
 import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
@@ -11,15 +12,15 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-// 静的ファイルのルーティング
-app.use(express.static(join(__dirname, "public")));
+// Ultravioletの標準静的ファイルを自動配信
+app.use(express.static(publicPath));
 app.use("/uv/", express.static(uvPath));
 app.use("/epoxy/", express.static(epoxyPath));
 app.use("/baremux/", express.static(baremuxPath));
 
-// 404フォールバック
+// フォールバック
 app.use((req, res) => {
-  res.status(404).sendFile(join(__dirname, "public", "index.html"));
+  res.status(404).sendFile(join(publicPath, "index.html"));
 });
 
 const server = createServer();
