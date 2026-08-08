@@ -1,45 +1,49 @@
-import express from "express";
-import { createServer } from "node:http";
-import { publicPath } from "ultraviolet-static";
-import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
-import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
-import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
-import pkg from "wisp-server-node";
-const { wisp } = pkg;
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import express from 'express';
 const app = express();
+const PORT = process.env.PORT || 10000;
 
-// Ultravioletの標準静的ファイルを自動配信
-app.use(express.static(publicPath));
-app.use("/uv/", express.static(uvPath));
-app.use("/epoxy/", express.static(epoxyPath));
-app.use("/baremux/", express.static(baremuxPath));
-
-// フォールバック
-app.use((req, res) => {
-  res.status(404).sendFile(join(publicPath, "index.html"));
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', '*');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
 });
 
-const server = createServer();
+app.get('/proxy', async (req, res) => {
+    const targetUrl = req.query.url;
+    if (!targetUrl) return res.status(400).send('URL required');
 
-server.on("request", (req, res) => {
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-  app(req, res);
+    try {
+        const response = await fetch(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            redirect: 'follow'
+        });
+
+        const body = await response.text();
+        const contentType = response.headers.get('content-type') || 'text/html';
+
+        let modifiedBody = body;
+        if (contentType.includes('text/html')) {
+            const baseTag = `<base href="${targetUrl}">`;
+            if (modifiedBody.includes('<head>')) {
+                modifiedBody = modifiedBody.replace('<head>', `<head>${baseTag}`);
+            } else if (modifiedBody.includes('<HEAD>')) {
+                modifiedBody = modifiedBody.replace('<HEAD>', `<HEAD>${baseTag}`);
+            } else {
+                modifiedBody = baseTag + modifiedBody;
+            }
+        }
+
+        res.set('Content-Type', contentType);
+        res.send(modifiedBody);
+    } catch (err) {
+        res.status(500).send('Proxy Error: ' + err.message);
+    }
 });
 
-server.on("upgrade", (req, socket, head) => {
-  if (req.url.endsWith("/wisp/")) {
-    wisp.routeRequest(req, socket, head);
-  } else {
-    socket.end();
-  }
-});
-
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
