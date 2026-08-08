@@ -11,10 +11,10 @@ const app = express();
 const server = http.createServer(app);
 const bareServer = createBareServer('/bare/');
 
-// 静的ファイルの提供（必要に応じてUVのファイルをホスティングする場合）
+// publicフォルダを静的ホスティング
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 通常のリクエストをBareサーバーへルーティング
+// ルーティング（Bareサーバーの処理を優先）
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
@@ -23,9 +23,7 @@ server.on('request', (req, res) => {
   }
 });
 
-// ポート設定（Renderが指定する環境変数PORTを使用、デフォルトは8080）
-const port = process.env.PORT || 8080;
-
+const port = process.env.PORT || 10000;
 server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
