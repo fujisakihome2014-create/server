@@ -3,7 +3,8 @@ import { createServer } from "node:http";
 import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
-import { wisp } from "wisp-server-node";
+import pkg from "wisp-server-node";
+const { wisp } = pkg;
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
