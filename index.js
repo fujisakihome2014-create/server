@@ -1,29 +1,31 @@
-import express from "express";
-import { createServer } from "node:http";
-import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import pkg from "wisp-server-node";
-const { wisp } = pkg;
+import express from 'express';
+import http from 'http';
+import { createBareServer } from '@tomphttp/bare-server-node';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = join(fileURLToPath(import.meta.url), "..");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
+const server = http.createServer(app);
+const bareServer = createBareServer('/bare/');
 
-app.use(express.static(join(__dirname, "public")));
-app.use("/uv/", express.static(uvPath));
+// 静的ファイルの提供（必要に応じてUVのファイルをホスティングする場合）
+app.use(express.static(path.join(__dirname, 'public')));
 
-const server = createServer();
-server.on("request", (req, res) => {
+// 通常のリクエストをBareサーバーへルーティング
+server.on('request', (req, res) => {
+  if (bareServer.shouldRoute(req)) {
+    bareServer.route(req, res);
+  } else {
     app(req, res);
+  }
 });
 
-server.on("upgrade", (req, socket, head) => {
-    if (req.url.endsWith("/wisp/")) {
-        wisp.routeRequest(req, socket, head);
-    } else {
-        socket.end();
-    }
-});
+// ポート設定（Renderが指定する環境変数PORTを使用、デフォルトは8080）
+const port = process.env.PORT || 8080;
 
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
