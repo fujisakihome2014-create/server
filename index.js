@@ -11,10 +11,14 @@ const app = express();
 const server = http.createServer(app);
 const bareServer = createBareServer('/bare/');
 
-// publicフォルダを静的ホスティング
+// 静的ファイルの提供
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ルーティング（Bareサーバーの処理を優先）
+// Ultravioletのプレフィックス（/sw/）へのアクセスを public/index.html または Service Worker に通すルーティング
+app.get('/sw/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
