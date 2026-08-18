@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxy Worker Loader</title>
-    <!-- ★修正: ultraviolet.bundle.jsを先に読み込む -->
     <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
     <div style="text-align: center;">
-        <h3 id="msg">初期化中...</h3>
+        <h3 id="msg">プロキシを初期化中...</h3>
     </div>
     <script>
         window.addEventListener('load', async () => {
@@ -20,6 +19,11 @@
             }
 
             try {
+                // 設定が確実に読み込まれているかチェック
+                if (typeof __uv$config === 'undefined') {
+                    throw new Error('__uv$config is not defined');
+                }
+
                 await navigator.serviceWorker.register('/sw.js', {
                     scope: __uv$config.prefix
                 });
@@ -36,6 +40,8 @@
                         location.href = fullPath;
                     };
                     document.body.appendChild(handlerScript);
+                } else {
+                    document.getElementById('msg').textContent = '準備完了';
                 }
             } catch (err) {
                 document.getElementById('msg').textContent = 'Initialization Error: ' + err.message;
