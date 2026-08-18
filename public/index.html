@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxy Worker Loader</title>
+    <!-- ★修正: ultraviolet.bundle.jsを先に読み込む -->
+    <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
     <div style="text-align: center;">
-        <h3 id="msg">プロキシを初期化中...</h3>
+        <h3 id="msg">初期化中...</h3>
     </div>
     <script>
         window.addEventListener('load', async () => {
@@ -28,17 +30,12 @@
                 const swPrefix = __uv$config.prefix;
                 
                 if (fullPath.startsWith(swPrefix) && fullPath.length > swPrefix.length) {
-                    const bundleScript = document.createElement('script');
-                    bundleScript.src = 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.bundle.js';
-                    bundleScript.onload = () => {
-                        const handlerScript = document.createElement('script');
-                        handlerScript.src = __uv$config.handler;
-                        handlerScript.onload = () => {
-                            location.href = fullPath;
-                        };
-                        document.body.appendChild(handlerScript);
+                    const handlerScript = document.createElement('script');
+                    handlerScript.src = __uv$config.handler;
+                    handlerScript.onload = () => {
+                        location.href = fullPath;
                     };
-                    document.body.appendChild(bundleScript);
+                    document.body.appendChild(handlerScript);
                 }
             } catch (err) {
                 document.getElementById('msg').textContent = 'Initialization Error: ' + err.message;
