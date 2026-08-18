@@ -22,8 +22,9 @@ self.__uv$config = {
             return str;
         }
     },
-    handler: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.handler.js',
-    bundle: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.bundle.js',
+    // すべて 3.2.6 に統一
+    handler: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.handler.js',
+    bundle: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.bundle.js',
     config: '/uv.config.js',
-    sw: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.sw.js',
+    sw: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.sw.js',
 };
