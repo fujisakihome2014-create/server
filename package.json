@@ -1,14 +1,15 @@
 {
-  "name": "uv-proxy-server",
+  "name": "proxy-server",
   "version": "1.0.0",
-  "description": "Ultraviolet Proxy Server",
-  "main": "index.js",
+  "description": "Ultraviolet proxy server deployed on Render",
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@tomphttp/bare-server-node": "^2.0.1",
+    "@titaniumnetwork-dev/ultraviolet": "^3.2.6",
+    "@tomphttp/bare-server-node": "^2.0.3",
     "express": "^4.19.2"
   }
 }
