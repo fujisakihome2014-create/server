@@ -8,18 +8,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
+// 【修正】http.createServer() に app を渡さず、独立させることで二重送信を防ぐ
+const server = http.createServer();
 const bareServer = createBareServer('/bare/');
 
-// 静的ファイルの提供（publicフォルダ内の index.html, uv.bundle.js, uv.config.js, sw.js など）
+// 静的ファイル（publicフォルダ内の index.html, sw.js, uv系ファイル）を提供
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ★重要：/sw/ 以下のリクエストをすべて public/index.html に転送するルーティング
-app.get('/sw/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Bareサーバーのリクエスト処理
+// BareサーバーまたはExpressへのリクエスト振り分け
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
