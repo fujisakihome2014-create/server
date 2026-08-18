@@ -3,28 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultraviolet Proxy</title>
+    <title>Proxy Worker Loader</title>
     <script src="/uv.config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.bundle.js"></script>
 </head>
-<body style="background: #0d1117; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+<body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
     <div style="text-align: center;">
-        <h2>Service Worker initializing...</h2>
-        <p>しばらくお待ちください。</p>
+        <h3 id="msg">プロキシを初期化中...</h3>
     </div>
     <script>
-        // Service Workerの登録処理
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js', {
+        window.addEventListener('load', async () => {
+            if (!('serviceWorker' in navigator)) {
+                document.getElementById('msg').textContent = 'Error: Service Worker not supported';
+                return;
+            }
+
+            try {
+                await navigator.serviceWorker.register('/sw.js', {
                     scope: __uv$config.prefix
-                }).then(() => {
-                    // 登録成功後に必要に応じてリロードや転送
-                }).catch(err => {
-                    console.error('Service Worker registration failed:', err);
                 });
-            });
-        }
+
+                await navigator.serviceWorker.ready;
+
+                const fullPath = window.location.pathname;
+                const swPrefix = __uv$config.prefix;
+                
+                if (fullPath.startsWith(swPrefix) && fullPath.length > swPrefix.length) {
+                    const bundleScript = document.createElement('script');
+                    bundleScript.src = 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.bundle.js';
+                    bundleScript.onload = () => {
+                        const handlerScript = document.createElement('script');
+                        handlerScript.src = __uv$config.handler;
+                        handlerScript.onload = () => {
+                            location.href = fullPath;
+                        };
+                        document.body.appendChild(handlerScript);
+                    };
+                    document.body.appendChild(bundleScript);
+                }
+            } catch (err) {
+                document.getElementById('msg').textContent = 'Initialization Error: ' + err.message;
+            }
+        });
     </script>
 </body>
 </html>
