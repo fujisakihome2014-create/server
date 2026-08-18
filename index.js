@@ -11,14 +11,15 @@ const app = express();
 const server = http.createServer(app);
 const bareServer = createBareServer('/bare/');
 
-// 静的ファイルの提供
+// 静的ファイルの提供（publicフォルダ内の index.html, uv.bundle.js, uv.config.js, sw.js など）
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Ultravioletのプレフィックス（/sw/）へのアクセスを public/index.html または Service Worker に通すルーティング
+// ★重要：/sw/ 以下のリクエストをすべて public/index.html に転送するルーティング
 app.get('/sw/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Bareサーバーのリクエスト処理
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
