@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxy Worker Loader</title>
-    <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@2.1.0/dist/uv.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
@@ -19,25 +19,28 @@
             }
 
             try {
-                // 設定が確実に読み込まれているかチェック
                 if (typeof __uv$config === 'undefined') {
                     throw new Error('__uv$config is not defined');
                 }
 
+                document.getElementById('msg').textContent = 'Service Worker 登録中...';
                 await navigator.serviceWorker.register('/sw.js', {
                     scope: __uv$config.prefix
                 });
 
-                await navigator.serviceWorker.ready;
+                document.getElementById('msg').textContent = 'プロキシ環境を起動中...';
 
                 const fullPath = window.location.pathname;
                 const swPrefix = __uv$config.prefix;
                 
                 if (fullPath.startsWith(swPrefix) && fullPath.length > swPrefix.length) {
                     const handlerScript = document.createElement('script');
-                    handlerScript.src = __uv$config.handler;
+                    handlerScript.src = 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.handler.js';
                     handlerScript.onload = () => {
                         location.href = fullPath;
+                    };
+                    handlerScript.onerror = () => {
+                        document.getElementById('msg').textContent = 'Error: uv.handler.jsの読み込みに失敗しました';
                     };
                     document.body.appendChild(handlerScript);
                 } else {
