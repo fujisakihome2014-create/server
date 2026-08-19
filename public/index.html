@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UV Proxy Client</title>
+    <!-- 1. bare-mux の読み込み -->
+    <script src="/baremux/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0;">
     
-    <!-- 初期化中のメッセージ表示エリア -->
+    <!-- 初期化中のメッセージ -->
     <div id="loading" style="text-align: center; margin-bottom: 20px;">
         <h3 id="msg">プロキシを初期化中...</h3>
     </div>
     
-    <!-- 準備完了後に表示されるURL入力フォーム -->
+    <!-- 準備完了後に表示されるフォーム -->
     <div id="app" style="display: none; flex-direction: column; align-items: center; gap: 10px; width: 400px; max-width: 90%;">
         <input id="url" placeholder="URLを入力 (例: https://google.com)" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #30363d; background: #161b22; color: #fff; box-sizing: border-box;" />
         <button onclick="go()" style="padding: 10px 20px; border-radius: 4px; border: none; background: #238636; color: #fff; cursor: pointer; width: 100%;">GO</button>
@@ -32,17 +34,24 @@
                     throw new Error('__uv$config is not defined');
                 }
 
+                document.getElementById('msg').textContent = '通信トランスポートを設定中...';
+                
+                // 2. bare-mux の接続とトランスポートの初期化（これがエラーを防ぎます）
+                const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
+                await connection.setTransport('/epoxy/index.mjs', [{ wisp: 'wss://wisp.mercurywork.shop/' }]);
+
                 document.getElementById('msg').textContent = 'Service Worker 登録中...';
                 await navigator.serviceWorker.register('/sw.js', {
                     scope: __uv$config.prefix
                 });
 
-                // 準備完了後、メッセージを隠して入力フォームを表示
+                // 準備完了：入力フォームを表示
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'flex';
 
             } catch (err) {
                 document.getElementById('msg').textContent = 'Initialization Error: ' + err.message;
+                console.error(err);
             }
         });
 
