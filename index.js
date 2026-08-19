@@ -3,17 +3,22 @@ import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
+import { baremuxPath } from '@mercuryworkshop/bare-mux/node';
+import { epoxyPath } from '@mercuryworkshop/epoxy-transport';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// 【修正】http.createServer() に app を渡さず、独立させることで二重送信を防ぐ
 const server = http.createServer();
 const bareServer = createBareServer('/bare/');
 
-// 静的ファイル（publicフォルダ内の index.html, sw.js, uv系ファイル）を提供
+// 静的ファイルの提供設定
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uv/', express.static(uvPath));
+app.use('/baremux/', express.static(baremuxPath));
+app.use('/epoxy/', express.static(epoxyPath));
 
 // BareサーバーまたはExpressへのリクエスト振り分け
 server.on('request', (req, res) => {
