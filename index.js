@@ -3,12 +3,16 @@ import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
 import { baremuxPath } from '@mercuryworkshop/bare-mux/node';
-import { epoxyPath } from '@mercuryworkshop/epoxy-transport';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
+
+// epoxy-transportのインストールパスを安全に取得する
+const epoxyPath = path.dirname(require.resolve('@mercuryworkshop/epoxy-transport'));
 
 const app = express();
 const server = http.createServer();
