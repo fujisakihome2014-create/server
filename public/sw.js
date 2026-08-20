@@ -1,6 +1,6 @@
-importScripts('https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.bundle.js');
+importScripts('/uv/uv.bundle.js');
 importScripts('/uv.config.js');
-importScripts('https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.sw.js');
+importScripts('/uv/uv.sw.js');
 
 const uv = new UVServiceWorker();
 
