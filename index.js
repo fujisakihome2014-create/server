@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
-import wisp from '@mercuryworkshop/wisp-js/server'; // 正しい最新Wispのインポートに修正
+import { server as wisp } from '@mercuryworkshop/wisp-js/server'; // 正しい名前付きインポートに修正
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
