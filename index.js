@@ -1,42 +1,40 @@
 import express from 'express';
 import http from 'http';
-import { createBareServer } from '@tomphttp/bare-server-node';
+import wisp from 'wisp-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
+import { baremuxPath } from '@mercuryworkshop/bare-mux/node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
+
+// epoxy-transport の正しいディレクトリを強制的に取得して解決（エラー対策）
+const epoxyPath = path.join(require.resolve('@mercuryworkshop/epoxy-transport/package.json'), '../dist');
 
 const app = express();
 const server = http.createServer(app);
 
-// 外部に頼らず、自前のRenderサーバー上でBareサーバーを起動
-const bareServer = createBareServer('/bare/');
-
-// Service Worker が /sw/ 以外でも正常に動くように強力な許可ヘッダを付与
+// Service-Worker-Allowed を設定
 app.use((req, res, next) => {
   res.setHeader('Service-Worker-Allowed', '/');
   next();
 });
 
-// バージョンズレ（headers is not iterable）を防ぐため、インストールしたUVのファイルを直接配信
+// 静的ファイルの提供（バージョンズレを防ぐためすべてローカルから配信）
 app.use('/uv/', express.static(uvPath));
-
-// 静的ファイルの提供
+app.use('/baremux/', express.static(baremuxPath));
+app.use('/epoxy/', express.static(epoxyPath));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 通常のHTTPリクエストをBareサーバーにルーティング
-server.on('request', (req, res) => {
-  if (bareServer.shouldRoute(req)) {
-    bareServer.route(req, res);
-  }
-});
-
-// ★重要★ WebSocket（リアルタイム通信）をBareサーバーにルーティング（これがないと一部サイトが壊れます）
+// 自サーバーのWispサーバーを立ち上げ（WebSocketエラーの根本対策）
 server.on('upgrade', (req, socket, head) => {
-  if (bareServer.shouldRoute(req)) {
-    bareServer.upgrade(req, socket, head);
+  if (req.url.endsWith('/wisp/')) {
+    wisp.routeRequest(req, socket, head);
+  } else {
+    socket.end();
   }
 });
 
