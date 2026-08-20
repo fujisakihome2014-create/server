@@ -13,10 +13,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// 従来型バックアップ用のBareサーバー
 const bareServer = createBareServer('/bare/');
 
-// Service Worker の強力な許可ヘッダ
+// Service Worker の許可ヘッダを厳格化
 app.use((req, res, next) => {
   res.setHeader('Service-Worker-Allowed', '/');
   next();
@@ -27,22 +26,30 @@ app.use('/uv/', express.static(uvPath));
 app.use('/baremux/', express.static(baremuxPath));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ★超重要対策：プロキシ用のパスを含め、存在しないページはすべて index.html へ流す
+// これにより、SWが読み込まれる前に404になるのを防ぎます
+app.get('/*', (req, res, next) => {
+  if (req.url.startsWith('/uv/service/')) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    next();
+  }
+});
+
 // 通常のHTTPリクエストをBareサーバーにルーティング
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
+  } else {
+    // 静的ファイルなどが見つからない場合は index.html を返す
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
 });
 
-// WebSocket（リアルタイム通信）のルーティングとエラー・切断対策
+// WebSocketルーティング
 server.on('upgrade', (req, socket, head) => {
   if (req.url.endsWith('/wisp/')) {
-    try {
-      wisp.routeRequest(req, socket, head);
-    } catch (err) {
-      console.error('Wisp route error:', err);
-      socket.destroy();
-    }
+    wisp.routeRequest(req, socket, head);
   } else if (bareServer.shouldRoute(req)) {
     bareServer.upgrade(req, socket, head);
   } else {
