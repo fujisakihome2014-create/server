@@ -7,7 +7,7 @@
     <script src="/baremux/index.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-    <div id="loading"><h3 id="msg">初期化中...</h3></div>
+    <div id="loading"><h3 id="msg">プロキシを初期化中...</h3></div>
     <div id="app" style="display: none; width: 400px; text-align: center;">
         <input id="url" placeholder="URLを入力 (例: https://google.com)" style="width: 100%; padding: 10px; background: #161b22; color: #fff; border: 1px solid #30363d; box-sizing: border-box;" />
         <button onclick="go()" style="width: 100%; padding: 10px; margin-top: 10px; background: #238636; border: none; color: #fff; cursor: pointer;">GO</button>
@@ -20,13 +20,13 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = 'BareMux通信確立中...';
+                msg.textContent = 'ローカル通信トランスポートを設定中...';
 
-                // 同一オリジン（自サーバー）の worker.js を指定
+                // 同一オリジンの worker.js を指定
                 const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
 
-                // トランスポートを設定
-                await connection.setTransport('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2/dist/index.mjs', [{ wisp: 'wss://wisp.tomp.app/' }]);
+                // 外部Wispではなく、自サーバーの /bare/ を使用する設定
+                await connection.setTransport('https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2/dist/bare.mjs', [{ bare: '/bare/' }]);
                 
                 msg.textContent = 'Service Worker登録中...';
                 await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
