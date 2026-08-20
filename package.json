@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@titaniumnetwork-dev/ultraviolet": "^3.2.6",
-    "@tomphttp/bare-server-node": "^2.0.3",
+    "@mercuryworkshop/bare-mux": "^2.0.1",
+    "@mercuryworkshop/epoxy-transport": "^2.1.4",
+    "wisp-server-node": "latest",
     "express": "^4.19.2"
   }
 }
