@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- bare-muxを復活 -->
+    <!-- bare-muxの読み込み -->
     <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
@@ -23,14 +23,14 @@
 
                 const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
                 
-                // 自サーバーのWispを最優先し、外部Wispをバックアップにする（最強の接続対策）
+                // 自サーバーのWispを最優先し、CDN経由の安定したトランスポートを使用
                 const wispUrl = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/wisp/';
                 await connection.setTransport(
-                    '/epoxy/index.mjs',
+                    'https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2/dist/index.mjs',
                     [
-                        { wisp: wispUrl }, // 1番目：自分のサーバーのWisp
-                        { wisp: 'wss://wisp.mercurywork.shop/' }, // 2番目以降：外部Wisp
-                        { wisp: 'wss://wisp.epoxy.cool/' }
+                        { wisp: wispUrl },
+                        { wisp: 'wss://wisp.tomp.app/' },
+                        { wisp: 'wss://wisp.mercurywork.shop/' }
                     ]
                 );
                 
