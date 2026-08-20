@@ -23,14 +23,13 @@
 
                 const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
                 
-                // 自サーバーのWispを最優先し、CDN経由の安定したトランスポートを使用
-                const wispUrl = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/wisp/';
+                // 安定性の高い公開Wispサーバー群を接続先にする（MuxTaskEnded対策）
                 await connection.setTransport(
                     'https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2/dist/index.mjs',
                     [
-                        { wisp: wispUrl },
-                        { wisp: 'wss://wisp.tomp.app/' },
-                        { wisp: 'wss://wisp.mercurywork.shop/' }
+                        { wisp: 'wss://wisp.mercurywork.shop/' },
+                        { wisp: 'wss://wisp.epoxy.cool/' },
+                        { wisp: 'wss://wisp.tomp.app/' }
                     ]
                 );
                 
