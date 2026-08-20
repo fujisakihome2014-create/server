@@ -24,7 +24,7 @@
 
                 const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
 
-                // 複数のWispサーバーを候補に設定し、接続が切れても自動で切り替わるようにする
+                // 複数のWispサーバーを候補に設定
                 await connection.setTransport(
                     'https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2/dist/index.mjs',
                     [
