@@ -1,7 +1,6 @@
 {
   "name": "proxy-server",
   "version": "1.0.0",
-  "description": "Ultraviolet proxy server deployed on Render",
   "type": "module",
   "main": "index.js",
   "scripts": {
