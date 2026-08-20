@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UV Proxy Client</title>
-    <!-- 1. bare-mux の読み込み -->
-    <script src="/baremux/index.js"></script>
+    <!-- 安定したCDNからbare-muxを直接読み込む -->
+    <script src="https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2.2.6/dist/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -36,9 +36,9 @@
 
                 document.getElementById('msg').textContent = '通信トランスポートを設定中...';
                 
-                // 2. bare-mux の接続とトランスポートの初期化（これがエラーを防ぎます）
-                const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
-                await connection.setTransport('/epoxy/index.mjs', [{ wisp: 'wss://wisp.mercurywork.shop/' }]);
+                // CDN上の worker.js を指定して接続を初期化
+                const connection = new BareMux.BareMuxConnection('https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2.2.6/dist/worker.js');
+                await connection.setTransport('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.3/dist/index.mjs', [{ wisp: 'wss://wisp.mercurywork.shop/' }]);
 
                 document.getElementById('msg').textContent = 'Service Worker 登録中...';
                 await navigator.serviceWorker.register('/sw.js', {
@@ -47,6 +47,7 @@
 
                 // 準備完了：入力フォームを表示
                 document.getElementById('loading').style.display = 'none';
+                document.getElementById('app').sideDisplay = 'flex';
                 document.getElementById('app').style.display = 'flex';
 
             } catch (err) {
