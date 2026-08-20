@@ -1,28 +1,13 @@
-self.__uv$config = {
-    prefix: '/sw/',
-    bare: '', // EpoxyとBare-Muxを使う場合は空にしておきます
-    encodeUrl: (str) => {
-        if (!str) return '';
-        try {
-            return encodeURIComponent(str.toString().split('').map((char, ind) => 
-                ind % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char
-            ).join(''));
-        } catch (err) {
-            return str;
-        }
-    },
-    decodeUrl: (str) => {
-        if (!str) return '';
-        try {
-            return decodeURIComponent(str).split('').map((char, ind) => 
-                ind % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char
-            ).join('');
-        } catch (err) {
-            return str;
-        }
-    },
-    handler: '/uv/uv.handler.js',
-    bundle: '/uv/uv.bundle.js',
-    config: '/uv.config.js',
-    sw: '/uv/uv.sw.js',
-};
+importScripts('/uv/uv.bundle.js');
+importScripts('/uv.config.js');
+// ★重要★ headers is not iterable の対策。UVより前にこれを読み込む必要があります
+importScripts('/baremux/bare.cjs'); 
+importScripts('/uv/uv.sw.js');
+
+const uv = new UVServiceWorker();
+
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        uv.fetch(event)
+    );
+});
