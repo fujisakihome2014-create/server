@@ -22,7 +22,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 静的ファイルの提供（エポキシのローカル配信は不要になったため削除）
+// 静的ファイルの提供
 app.use('/uv/', express.static(uvPath));
 app.use('/baremux/', express.static(baremuxPath));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -34,10 +34,15 @@ server.on('request', (req, res) => {
   }
 });
 
-// WebSocket（リアルタイム通信）のルーティングを最新WispとBareで完璧に分岐
+// WebSocket（リアルタイム通信）のルーティングとエラー・切断対策
 server.on('upgrade', (req, socket, head) => {
   if (req.url.endsWith('/wisp/')) {
-    wisp.routeRequest(req, socket, head);
+    try {
+      wisp.routeRequest(req, socket, head);
+    } catch (err) {
+      console.error('Wisp route error:', err);
+      socket.destroy();
+    }
   } else if (bareServer.shouldRoute(req)) {
     bareServer.upgrade(req, socket, head);
   } else {
