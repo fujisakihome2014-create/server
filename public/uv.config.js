@@ -1,7 +1,6 @@
 self.__uv$config = {
     prefix: '/sw/',
     bare: '/bare/',
-    // Ultravioletに依存しない安全なXORエンコード/デコード処理
     encodeUrl: (str) => {
         if (!str) return '';
         try {
