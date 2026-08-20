@@ -21,8 +21,8 @@ self.__uv$config = {
             return str;
         }
     },
-    handler: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.handler.js',
-    bundle: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.bundle.js',
+    handler: '/uv/uv.handler.js',
+    bundle: '/uv/uv.bundle.js',
     config: '/uv.config.js',
-    sw: 'https://cdn.jsdelivr.net/npm/@titaniumnetwork-dev/ultraviolet@3.2.6/dist/uv.sw.js',
+    sw: '/uv/uv.sw.js',
 };
