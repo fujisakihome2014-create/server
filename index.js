@@ -11,20 +11,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
-// epoxy-transportのインストールパスを安全に取得する
+// 安全なパス解決
 const epoxyPath = path.dirname(require.resolve('@mercuryworkshop/epoxy-transport'));
 
 const app = express();
 const server = http.createServer();
 const bareServer = createBareServer('/bare/');
 
-// 静的ファイルの提供設定
+// 静的ファイルの提供
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uv/', express.static(uvPath));
 app.use('/baremux/', express.static(baremuxPath));
 app.use('/epoxy/', express.static(epoxyPath));
 
-// BareサーバーまたはExpressへのリクエスト振り分け
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
