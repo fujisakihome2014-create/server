@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- バージョン不一致を防ぐため、必ず自サーバーのUVを読み込む -->
+    <!-- bare-muxを復活 -->
+    <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -18,9 +19,22 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = 'Service Workerを登録中...';
+                msg.textContent = 'トランスポートを設定中...';
+
+                const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
                 
-                // 余計なトランスポート設定を消去し、直接SWを登録（最高速・最高安定）
+                // 自サーバーのWispを最優先し、外部Wispをバックアップにする（最強の接続対策）
+                const wispUrl = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/wisp/';
+                await connection.setTransport(
+                    '/epoxy/index.mjs',
+                    [
+                        { wisp: wispUrl }, // 1番目：自分のサーバーのWisp
+                        { wisp: 'wss://wisp.mercurywork.shop/' }, // 2番目以降：外部Wisp
+                        { wisp: 'wss://wisp.epoxy.cool/' }
+                    ]
+                );
+                
+                msg.textContent = 'Service Workerを登録中...';
                 await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
 
                 document.getElementById('loading').style.display = 'none';
