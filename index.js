@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
-import wisp from 'wisp-server-node';
+import wisp from '@mercuryworkshop/wisp-js/server'; // 正しい最新Wispのインポートに修正
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -12,16 +12,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
-// epoxy-transport のパス解決（モジュールエラー対策）
-const epoxyPath = path.join(require.resolve('@mercuryworkshop/epoxy-transport/package.json'), '../dist');
+// epoxy-transport の安全なパス解決
+const epoxyPath = path.dirname(require.resolve('@mercuryworkshop/epoxy-transport'));
 
 const app = express();
 const server = http.createServer(app);
 
-// 従来型バックアップ用のBareサーバーを初期化
+// 従来型バックアップ用のBareサーバー
 const bareServer = createBareServer('/bare/');
 
-// Service-Worker-Allowed を設定
+// Service Worker の強力な許可ヘッダ
 app.use((req, res, next) => {
   res.setHeader('Service-Worker-Allowed', '/');
   next();
@@ -33,20 +33,18 @@ app.use('/baremux/', express.static(baremuxPath));
 app.use('/epoxy/', express.static(epoxyPath));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 通常のHTTPリクエストをBareサーバーにルーティング（フォールバック用）
+// 通常のHTTPリクエストをBareサーバーにルーティング
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
   }
 });
 
-// WebSocket（リアルタイム通信）のルーティングをWispとBareで分岐（最強の冗長化）
+// WebSocket（リアルタイム通信）のルーティングを最新WispとBareで完璧に分岐
 server.on('upgrade', (req, socket, head) => {
   if (req.url.endsWith('/wisp/')) {
-    // 高速なWispプロトコルはWispサーバーへ
     wisp.routeRequest(req, socket, head);
   } else if (bareServer.shouldRoute(req)) {
-    // 従来のプロトコルはBareサーバーへ
     bareServer.upgrade(req, socket, head);
   } else {
     socket.end();
