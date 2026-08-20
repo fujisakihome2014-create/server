@@ -24,9 +24,9 @@
 
                 const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
 
-                // 複数のWispサーバーを候補に設定
+                // 自サーバー上の epoxy を使用する
                 await connection.setTransport(
-                    'https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2/dist/index.mjs',
+                    '/epoxy/index.mjs',
                     [
                         { wisp: 'wss://wisp.tomp.app/' },
                         { wisp: 'wss://wisp.epoxy.cool/' },
