@@ -9,8 +9,6 @@
   "dependencies": {
     "@titaniumnetwork-dev/ultraviolet": "^3.2.6",
     "@tomphttp/bare-server-node": "^2.0.3",
-    "@mercuryworkshop/bare-mux": "latest",
-    "@mercuryworkshop/epoxy-transport": "latest",
     "express": "^4.19.2"
   }
 }
