@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- 自サーバーからbare-muxのページ側スクリプトを読み込む -->
+    <!-- 自サーバーからbare-muxを読み込む -->
     <script src="/baremux/index.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
@@ -22,13 +22,16 @@
                 const msg = document.getElementById('msg');
                 msg.textContent = 'トランスポートを設定中...';
 
-                // 1. 自サーバーの worker.js を指定して接続
                 const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
 
-                // 2. EpoxyTransport と安定した公開 Wisp サーバーを設定
+                // 複数のWispサーバーを候補に設定し、接続が切れても自動で切り替わるようにする
                 await connection.setTransport(
                     'https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2/dist/index.mjs',
-                    [{ wisp: 'wss://wisp.mercurywork.shop/' }]
+                    [
+                        { wisp: 'wss://wisp.tomp.app/' },
+                        { wisp: 'wss://wisp.epoxy.cool/' },
+                        { wisp: 'wss://wisp.mercurywork.shop/' }
+                    ]
                 );
                 
                 msg.textContent = 'Service Worker登録中...';
