@@ -3,40 +3,44 @@ import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
 import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
-import { baremuxPath } from '@mercuryworkshop/bare-mux/node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const require = createRequire(import.meta.url);
-
-// epoxy-transport のパスを安全に解決
-const epoxyPath = path.dirname(require.resolve('@mercuryworkshop/epoxy-transport'));
 
 const app = express();
 const server = http.createServer(app);
+
+// 外部に頼らず、自前のRenderサーバー上でBareサーバーを起動
 const bareServer = createBareServer('/bare/');
 
-// sw.js を配信する際に Service-Worker-Allowed ヘッダを明示的に付与
-app.get('/sw.js', (req, res) => {
-  res.setHeader('Service-Worker-Allowed', '/sw/');
-  res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+// Service Worker が /sw/ 以外でも正常に動くように強力な許可ヘッダを付与
+app.use((req, res, next) => {
+  res.setHeader('Service-Worker-Allowed', '/');
+  next();
 });
+
+// バージョンズレ（headers is not iterable）を防ぐため、インストールしたUVのファイルを直接配信
+app.use('/uv/', express.static(uvPath));
 
 // 静的ファイルの提供
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uv/', express.static(uvPath));
-app.use('/baremux/', express.static(baremuxPath));
-app.use('/epoxy/', express.static(epoxyPath));
 
+// 通常のHTTPリクエストをBareサーバーにルーティング
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
   }
 });
 
+// ★重要★ WebSocket（リアルタイム通信）をBareサーバーにルーティング（これがないと一部サイトが壊れます）
+server.on('upgrade', (req, socket, head) => {
+  if (bareServer.shouldRoute(req)) {
+    bareServer.upgrade(req, socket, head);
+  }
+});
+
 const port = process.env.PORT || 10000;
 server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server running securely on port ${port}`);
 });
