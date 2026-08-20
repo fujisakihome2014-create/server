@@ -1,6 +1,6 @@
 self.__uv$config = {
     prefix: '/sw/',
-    bare: '/bare/',
+    bare: '', // EpoxyとBare-Muxを使う場合は空にしておきます
     encodeUrl: (str) => {
         if (!str) return '';
         try {
