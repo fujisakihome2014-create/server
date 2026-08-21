@@ -1,26 +1,8 @@
 self.__uv$config = {
     prefix: '/uv/service/',
-    bare: '/bare/',
-    encodeUrl: (str) => {
-        if (!str) return '';
-        try {
-            return encodeURIComponent(str.toString().split('').map((char, ind) => 
-                ind % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char
-            ).join(''));
-        } catch (err) {
-            return str;
-        }
-    },
-    decodeUrl: (str) => {
-        if (!str) return '';
-        try {
-            return decodeURIComponent(str).split('').map((char, ind) => 
-                ind % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char
-            ).join('');
-        } catch (err) {
-            return str;
-        }
-    },
+    bare: '/bare/', // サーバー側の Bare サーバーに直接つなぐ
+    encodeUrl: Ultraviolet.codec.xor.encode,
+    decodeUrl: Ultraviolet.codec.xor.decode,
     handler: '/uv/uv.handler.js',
     bundle: '/uv/uv.bundle.js',
     config: '/uv.config.js',
