@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- bare-mux のインデックスを確実に最初に読み込ませる -->
-    <script src="/baremux/index.js"></script>
+    <!-- bare-muxのスクリプト読み込みを完全に削除 -->
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -19,25 +18,16 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = '通信モジュールを設定中...';
-
-                // SharedWorkerのタイムアウトエラーを防ぎつつBareMuxを初期化
-                if (window.BareMux) {
-                    const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
-                    // 自サーバーのBareパスを使用
-                    await connection.setTransport('/bare/');
-                }
-
                 msg.textContent = 'Service Workerを登録中...';
+
+                // 余計な接続処理を挟まず、Service Workerの登録のみを行う
                 await navigator.serviceWorker.register('/sw.js');
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             } catch (err) {
                 console.error(err);
-                // 万が一初期化に失敗しても画面を表示して入力を受け付ける
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('app').style.display = 'block';
+                document.getElementById('msg').textContent = 'エラー: ' + err.message;
             }
         })();
 
