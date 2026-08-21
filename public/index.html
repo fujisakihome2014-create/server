@@ -19,8 +19,8 @@
                 const msg = document.getElementById('msg');
                 msg.textContent = 'Service Workerを登録中...';
 
-                // スコープをルート（'/'）にして確実にすべてのリクエストを網羅
-                await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                // スコープを指定せず、デフォルトのルートで安全に登録
+                await navigator.serviceWorker.register('/sw.js');
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
