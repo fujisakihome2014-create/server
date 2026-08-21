@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- bare-muxの読み込み -->
-    <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -19,32 +17,16 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = 'キャッシュをクリア中...';
-
-                // 古いService Workerをすべて削除してリセット
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let reg of registrations) {
-                    await reg.unregister();
-                }
-
-                msg.textContent = '通信モジュールを設定中...';
-
-                // ★ SharedWorkerではなく通常の worker.js を強制指定してブロックを回避
-                const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
-                
-                // 制限された環境でも動作するよう、組み込みのBareサーバー経由に設定
-                await connection.setTransport('/epoxy/index.mjs', [{ wisp: null }]);
-
                 msg.textContent = 'Service Workerを登録中...';
-                await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
+
+                // スコープをルート（'/'）にして確実にすべてのリクエストを網羅
+                await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             } catch (err) {
                 console.error(err);
-                // 万が一エラーが出ても画面は強制表示する
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('app').style.display = 'block';
+                document.getElementById('msg').textContent = 'エラー: ' + err.message;
             }
         })();
 
