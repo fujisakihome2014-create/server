@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- bare-muxの読み込み -->
-    <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
     <div id="loading"><h3 id="msg">プロキシを初期化中...</h3></div>
     <div id="app" style="display: none; width: 400px; text-align: center;">
-        <!-- onkeydown を追加し、Enterキーで go() が実行されるようにしました -->
         <input id="url" placeholder="URLを入力 (例: https://google.com)" onkeydown="if(event.key === 'Enter') go();" style="width: 100%; padding: 10px; background: #161b22; color: #fff; border: 1px solid #30363d; box-sizing: border-box;" />
         <button onclick="go()" style="width: 100%; padding: 10px; margin-top: 10px; background: #238636; border: none; color: #fff; cursor: pointer;">GO</button>
     </div>
@@ -20,21 +17,15 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = '通信モジュールを設定中...';
+                msg.textContent = '古いキャッシュをクリア中...';
 
-                const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
-                
-                // 安定性の高い公開Wispサーバー群
-                await connection.setTransport(
-                    'https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2/dist/index.mjs',
-                    [
-                        { wisp: 'wss://wisp.mercurywork.shop/' },
-                        { wisp: 'wss://wisp.epoxy.cool/' },
-                        { wisp: 'wss://wisp.tomp.app/' }
-                    ]
-                );
-                
-                msg.textContent = 'Service Workerを登録中...';
+                // 古い壊れたService Workerをすべて強制解除する
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let reg of registrations) {
+                    await reg.unregister();
+                }
+
+                msg.textContent = 'Service Workerを再登録中...';
                 await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
 
                 document.getElementById('loading').style.display = 'none';
