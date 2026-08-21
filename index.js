@@ -13,30 +13,20 @@ const server = http.createServer(app);
 
 const bareServer = createBareServer('/bare/');
 
-// Service Worker の許可ヘッダ
 app.use((req, res, next) => {
   res.setHeader('Service-Worker-Allowed', '/');
   next();
 });
 
-// 静的ファイルの提供
 app.use('/uv/', express.static(uvPath));
 app.use(express.static(path.join(__dirname, 'public')));
-
-// ★超重要：/sw/ で始まるアクセスをすべて index.html に強制的に流し込む
-app.use((req, res, next) => {
-  if (req.url.startsWith('/sw/')) {
-    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  }
-  next();
-});
 
 // HTTPリクエストをBareサーバーへ
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
   } else {
-    // どのファイルも見つからない場合は index.html を返す
+    // ページが見つからない場合は index.html を返す
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
 });
