@@ -13,25 +13,26 @@ const server = http.createServer(app);
 
 const bareServer = createBareServer('/bare/');
 
+// Service Worker のスコープ制限を外すヘッダー
 app.use((req, res, next) => {
   res.setHeader('Service-Worker-Allowed', '/');
   next();
 });
 
+// Ultraviolet のファイルを確実に配信
 app.use('/uv/', express.static(uvPath));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// HTTPリクエストをBareサーバーへ
+// HTTPリクエストのルーティング
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
   } else {
-    // ページが見つからない場合は index.html を返す
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
 });
 
-// WebSocket通信をBareサーバーへ
+// WebSocket/Upgrade のルーティング
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.upgrade(req, socket, head);
