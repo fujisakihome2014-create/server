@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- 1. BareMuxのスクリプトを正しく読み込む -->
+    <!-- bare-muxの読み込み -->
     <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
@@ -19,7 +19,7 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = '古いキャッシュをクリア中...';
+                msg.textContent = 'キャッシュをクリア中...';
 
                 // 古いService Workerをすべて削除してリセット
                 const registrations = await navigator.serviceWorker.getRegistrations();
@@ -27,13 +27,13 @@
                     await reg.unregister();
                 }
 
-                msg.textContent = 'トランスポートを設定中...';
+                msg.textContent = '通信モジュールを設定中...';
 
-                // 2. BareMuxのコネクションを安全に初期化
+                // ★ SharedWorkerではなく通常の worker.js を強制指定してブロックを回避
                 const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
                 
-                // 3. 安定性の極めて高い自前の Bare サーバーのパスを通す
-                await connection.setTransport('/epoxy/index.mjs', [{ wisp: null }]); // バックアップとして機能
+                // 制限された環境でも動作するよう、組み込みのBareサーバー経由に設定
+                await connection.setTransport('/epoxy/index.mjs', [{ wisp: null }]);
 
                 msg.textContent = 'Service Workerを登録中...';
                 await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
@@ -42,7 +42,7 @@
                 document.getElementById('app').style.display = 'block';
             } catch (err) {
                 console.error(err);
-                // 万が一トランスポート設定で警告が出ても、SW登録が生きていれば続行できるようにする
+                // 万が一エラーが出ても画面は強制表示する
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             }
