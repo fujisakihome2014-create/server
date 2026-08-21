@@ -3,11 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- ダミーの BareMux 定義を先に仕込んで、uv.bundle.js のエラーを防ぐ -->
-    <script>
-        window.__bareMuxWorkaround = true;
-    </script>
-    <script src="/baremux/index.js"></script>
+    <!-- bare-muxは一切読み込みません -->
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -22,23 +18,22 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = 'Service Workerを登録中...';
+                msg.textContent = 'キャッシュと古いSWをクリア中...';
 
-                // 古いキャッシュをすべて削除してリセット
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let reg of registrations) {
+                // 古いService Workerを完全に破棄
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let reg of regs) {
                     await reg.unregister();
                 }
 
-                // Service Worker の登録
+                msg.textContent = 'Service Workerを登録中...';
                 await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             } catch (err) {
                 console.error(err);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('app').style.display = 'block';
+                document.getElementById('msg').textContent = 'エラー: ' + err.message;
             }
         })();
 
@@ -48,6 +43,7 @@
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
+            // Ultravioletのプレフィックスとエンコードを適用して移動
             location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
         }
     </script>
