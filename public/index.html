@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- bare-muxのスクリプト読み込みを完全に削除 -->
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -20,8 +19,12 @@
                 const msg = document.getElementById('msg');
                 msg.textContent = 'Service Workerを登録中...';
 
-                // 余計な接続処理を挟まず、Service Workerの登録のみを行う
-                await navigator.serviceWorker.register('/sw.js');
+                // 確実なスコープで登録
+                if (!navigator.serviceWorker) {
+                    throw new Error('Service Workerがサポートされていません');
+                }
+
+                await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
@@ -37,6 +40,7 @@
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
+            // Ultraviolet のエンコードとプレフィックスを適用
             location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
         }
     </script>
