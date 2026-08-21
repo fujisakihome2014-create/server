@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
+    <!-- ダミーの BareMux 定義を先に仕込んで、uv.bundle.js のエラーを防ぐ -->
+    <script>
+        window.__bareMuxWorkaround = true;
+    </script>
+    <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -19,18 +24,21 @@
                 const msg = document.getElementById('msg');
                 msg.textContent = 'Service Workerを登録中...';
 
-                // 確実なスコープで登録
-                if (!navigator.serviceWorker) {
-                    throw new Error('Service Workerがサポートされていません');
+                // 古いキャッシュをすべて削除してリセット
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let reg of registrations) {
+                    await reg.unregister();
                 }
 
+                // Service Worker の登録
                 await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             } catch (err) {
                 console.error(err);
-                document.getElementById('msg').textContent = 'エラー: ' + err.message;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
             }
         })();
 
@@ -40,7 +48,6 @@
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
-            // Ultraviolet のエンコードとプレフィックスを適用
             location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
         }
     </script>
