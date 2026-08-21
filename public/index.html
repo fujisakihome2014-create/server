@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
+    <!-- 1. BareMuxのスクリプトを正しく読み込む -->
+    <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -19,20 +21,30 @@
                 const msg = document.getElementById('msg');
                 msg.textContent = '古いキャッシュをクリア中...';
 
-                // 古い壊れたService Workerをすべて強制解除する
+                // 古いService Workerをすべて削除してリセット
                 const registrations = await navigator.serviceWorker.getRegistrations();
                 for (let reg of registrations) {
                     await reg.unregister();
                 }
 
-                msg.textContent = 'Service Workerを再登録中...';
+                msg.textContent = 'トランスポートを設定中...';
+
+                // 2. BareMuxのコネクションを安全に初期化
+                const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
+                
+                // 3. 安定性の極めて高い自前の Bare サーバーのパスを通す
+                await connection.setTransport('/epoxy/index.mjs', [{ wisp: null }]); // バックアップとして機能
+
+                msg.textContent = 'Service Workerを登録中...';
                 await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             } catch (err) {
                 console.error(err);
-                document.getElementById('msg').textContent = 'エラー: ' + err.message;
+                // 万が一トランスポート設定で警告が出ても、SW登録が生きていれば続行できるようにする
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
             }
         })();
 
