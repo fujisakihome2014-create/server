@@ -13,20 +13,19 @@ const server = http.createServer(app);
 // Bare サーバーの作成
 const bareServer = createBareServer('/bare/');
 
-// ヘッダーの二重送信を防ぐ安全なミドルウェア
-app.use((req, res, next) => {
-  if (!res.headersSent) {
-    res.setHeader('Service-Worker-Allowed', '/');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+// 静的ファイルの配信（※余計なグローバルミドルウェアを廃止し、ここで安全に処理）
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path, stat) => {
+    // ヘッダーがまだ送信されていない場合のみ安全に付与
+    if (!res.headersSent) {
+      res.setHeader('Service-Worker-Allowed', '/');
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    }
   }
-  next();
-});
+}));
 
-// 静的ファイルの配信
-app.use(express.static(path.join(__dirname, 'public')));
-
-// HTTP リクエストのルーティング（正しいメソッド: routeRequest）
+// HTTP リクエストのルーティング
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -35,7 +34,7 @@ server.on('request', (req, res) => {
   }
 });
 
-// WebSocket のルーティング（正しいメソッド: routeUpgrade）
+// WebSocket のルーティング
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeUpgrade(req, socket, head);
