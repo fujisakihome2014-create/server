@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>UV Proxy Client</title>
-    <!-- bare-muxのスクリプトは一切読み込まない -->
+    <!-- bare-muxのクライアントスクリプトを読み込み -->
+    <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv.config.js"></script>
 </head>
@@ -18,32 +19,35 @@
         (async () => {
             try {
                 const msg = document.getElementById('msg');
-                msg.textContent = 'Service Workerを登録中...';
+                msg.textContent = '通信トランスポートを初期化中...';
 
-                // 古いキャッシュや壊れた登録を掃除
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let reg of registrations) {
-                    await reg.unregister();
+                // 1. Bare-Mux のコネクションを確立
+                const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
+                
+                // 2. Epoxyトランスポートを設定（MessagePortエラーを防ぐための必須現代方式）
+                if (!await connection.getTransport()) {
+                    await connection.setTransport('/epoxy/index.mjs', [{
+                        wisp: (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/wisp/'
+                    }]);
                 }
 
-                // プレーンなService Workerを登録
+                msg.textContent = 'Service Workerを登録中...';
                 await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
             } catch (err) {
                 console.error(err);
-                document.getElementById('msg').textContent = 'エラー: ' + err.message;
+                document.getElementById('msg').textContent = '初期化エラー: ' + err.message;
             }
         })();
 
-        function go() {
+        async function go() {
             let url = document.getElementById('url').value.trim();
             if (!url) return;
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
-            // MessagePortを使わない直接のプレフィックス経由で遷移
             location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
         }
     </script>
