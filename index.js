@@ -3,6 +3,9 @@ import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
+import { epoxyPath } from '@mercuryworkshop/epoxy-transport';
+import { baremuxPath } from '@mercuryworkshop/bare-mux/node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,13 +15,20 @@ const server = http.createServer(app);
 
 const bareServer = createBareServer('/bare/');
 
+// COOP/COEPヘッダー（Bare-MuxのSharedWorker動作に必須）
 app.use((req, res, next) => {
   res.setHeader('Service-Worker-Allowed', '/');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   next();
 });
 
-// public フォルダをそのまま配信
+// 各種ライブラリの静的配信
+app.use('/uv/', express.static(uvPath));
+app.use('/epoxy/', express.static(epoxyPath));
+app.use('/baremux/', express.static(baremuxPath));
+
+// フロントエンドの静的ファイル配信
 app.use(express.static(path.join(__dirname, 'public')));
 
 server.on('request', (req, res) => {
