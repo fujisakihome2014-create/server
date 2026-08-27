@@ -10,18 +10,19 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// 外部通信を仲介する Bare サーバー
 const bareServer = createBareServer('/bare/');
 
-// Service Worker や安全な通信に必要なセキュリティヘッダーを付与
+// ヘッダーの二重送信を防ぐ安全なミドルウェア
 app.use((req, res, next) => {
-  res.setHeader('Service-Worker-Allowed', '/');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  if (!res.headersSent) {
+    res.setHeader('Service-Worker-Allowed', '/');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  }
   next();
 });
 
-// public フォルダ内のファイルを静的配信
+// 静的ファイルの配信
 app.use(express.static(path.join(__dirname, 'public')));
 
 // HTTP リクエストのルーティング
