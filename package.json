@@ -7,11 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@titaniumnetwork-dev/ultraviolet": "^3.2.6",
-    "@mercuryworkshop/bare-mux": "^2.0.1",
-    "@mercuryworkshop/epoxy-transport": "^2.1.4",
     "@tomphttp/bare-server-node": "^2.0.3",
-    "@mercuryworkshop/wisp-js": "latest",
     "express": "^4.19.2"
   }
 }
