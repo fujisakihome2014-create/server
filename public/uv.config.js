@@ -7,6 +7,4 @@ self.__uv$config = {
     bundle: '/uv/uv.bundle.js',
     config: '/uv.config.js',
     sw: '/uv/uv.sw.js',
-    // BareMuxの自動起動を完全に無効化するフラグ
-    middleware: []
 };
