@@ -3,7 +3,6 @@ import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,7 +10,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// Bareサーバーを明示的なパスで作成
 const bareServer = createBareServer('/bare/');
 
 app.use((req, res, next) => {
@@ -20,40 +18,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// Ultravioletの静的ファイルを配信
-app.use('/uv/', express.static(uvPath));
+// public フォルダをそのまま配信
 app.use(express.static(path.join(__dirname, 'public')));
 
-// HTTPリクエストのルーティング（Bareサーバーを確実に優先処理）
 server.on('request', (req, res) => {
-  try {
-    if (bareServer.shouldRoute(req)) {
-      bareServer.route(req, res);
-    } else {
-      app(req, res);
-    }
-  } catch (err) {
-    console.error('Bare Server Error:', err);
-    res.writeHead(500, { 'Content-Type': 'text/plain' });
-    res.end('Internal Server Error');
+  if (bareServer.shouldRoute(req)) {
+    bareServer.route(req, res);
+  } else {
+    app(req, res);
   }
 });
 
-// WebSocket通信のルーティング
 server.on('upgrade', (req, socket, head) => {
-  try {
-    if (bareServer.shouldRoute(req)) {
-      bareServer.route(req, socket, head);
-    } else {
-      socket.destroy();
-    }
-  } catch (err) {
-    console.error('WebSocket Upgrade Error:', err);
+  if (bareServer.shouldRoute(req)) {
+    bareServer.route(req, socket, head);
+  } else {
     socket.destroy();
   }
 });
 
 const port = process.env.PORT || 10000;
 server.listen(port, () => {
-  console.log(`Server running securely on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
