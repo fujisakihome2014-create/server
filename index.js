@@ -26,19 +26,19 @@ app.use((req, res, next) => {
 // 静的ファイルの配信
 app.use(express.static(path.join(__dirname, 'public')));
 
-// HTTP リクエストのルーティング（正しいメソッドに修正）
+// HTTP リクエストのルーティング（正しいメソッド: routeRequest）
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
-    bareServer.handleRequest(req, res); // <-- .route から .handleRequest に変更
+    bareServer.routeRequest(req, res);
   } else {
     app(req, res);
   }
 });
 
-// WebSocket のルーティング（正しいメソッドに修正）
+// WebSocket のルーティング（正しいメソッド: routeUpgrade）
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
-    bareServer.handleUpgrade(req, socket, head); // <-- .route から .handleUpgrade に変更
+    bareServer.routeUpgrade(req, socket, head);
   } else {
     socket.destroy();
   }
