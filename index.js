@@ -3,9 +3,6 @@ import http from 'http';
 import { createBareServer } from '@tomphttp/bare-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
-import { epoxyPath } from '@mercuryworkshop/epoxy-transport';
-import { baremuxPath } from '@mercuryworkshop/bare-mux/node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,9 +10,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
+// 外部通信を仲介する Bare サーバー
 const bareServer = createBareServer('/bare/');
 
-// COOP/COEPヘッダー（Bare-MuxのSharedWorker動作に必須）
+// Service Worker や安全な通信に必要なセキュリティヘッダーを付与
 app.use((req, res, next) => {
   res.setHeader('Service-Worker-Allowed', '/');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
@@ -23,14 +21,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// 各種ライブラリの静的配信
-app.use('/uv/', express.static(uvPath));
-app.use('/epoxy/', express.static(epoxyPath));
-app.use('/baremux/', express.static(baremuxPath));
-
-// フロントエンドの静的ファイル配信
+// public フォルダ内のファイルを静的配信
 app.use(express.static(path.join(__dirname, 'public')));
 
+// HTTP リクエストのルーティング
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, res);
@@ -39,6 +33,7 @@ server.on('request', (req, res) => {
   }
 });
 
+// WebSocket のルーティング
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.route(req, socket, head);
@@ -49,5 +44,5 @@ server.on('upgrade', (req, socket, head) => {
 
 const port = process.env.PORT || 10000;
 server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Secure Proxy Server running on port ${port}`);
 });
