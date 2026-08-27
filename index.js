@@ -10,13 +10,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// Bare サーバーの作成
+// Bareサーバーを /bare/ で作成
 const bareServer = createBareServer('/bare/');
 
-// 静的ファイルの配信（※余計なグローバルミドルウェアを廃止し、ここで安全に処理）
+// 静的ファイルの配信（ここでヘッダー競合を防ぐ）
 app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, path, stat) => {
-    // ヘッダーがまだ送信されていない場合のみ安全に付与
+  setHeaders: (res) => {
     if (!res.headersSent) {
       res.setHeader('Service-Worker-Allowed', '/');
       res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
