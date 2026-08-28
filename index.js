@@ -1,6 +1,5 @@
 import express from 'express';
 import http from 'http';
-import { createBareServer } from '@tomphttp/bare-server-node';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,8 +9,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-const bareServer = createBareServer('/bare/');
-
+// 静的ファイルの配信
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res) => {
     if (!res.headersSent) {
@@ -22,23 +20,37 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-server.on('request', (req, res) => {
-  if (bareServer.shouldRoute(req)) {
-    bareServer.routeRequest(req, res);
-  } else {
-    app(req, res);
+// シンプルなプロキシのエンドポイント（例: /proxy?url=https://example.com）
+app.get('/proxy', async (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl) {
+    return res.status(400).send('URLが指定されていません。');
   }
-});
 
-server.on('upgrade', (req, socket, head) => {
-  if (bareServer.shouldRoute(req)) {
-    bareServer.routeUpgrade(req, socket, head);
-  } else {
-    socket.destroy();
+  try {
+    const response = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+      }
+    });
+
+    const body = await response.text();
+    
+    // レスポンスのヘッダーを引き継いで返す
+    response.headers.forEach((val, key) => {
+      // セキュリティ上の制限があるヘッダーを除外
+      if (!['content-encoding', 'transfer-encoding'].includes(key.toLowerCase())) {
+        res.setHeader(key, val);
+      }
+    });
+
+    res.status(response.status).send(body);
+  } catch (err) {
+    res.status(500).send('プロキシエラー: ' + err.message);
   }
 });
 
 const port = process.env.PORT || 10000;
 server.listen(port, () => {
-  console.log(`Secure Proxy Server running on port ${port}`);
+  console.log(`Simple Proxy Server running on port ${port}`);
 });
