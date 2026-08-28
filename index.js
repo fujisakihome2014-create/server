@@ -10,16 +10,23 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// Bareサーバーを /bare/ で作成
+// Bareサーバーのインスタンス作成
 const bareServer = createBareServer('/bare/');
 
-// ヘッダーのカスタム設定を完全に排除し、純粋に静的ファイルを配信
+// 静的ファイルの配信
 app.use(express.static(path.join(__dirname, 'public')));
 
-// HTTPリクエストのルーティング
+// リクエストのルーティング（競合を防ぐための安全な条件分岐）
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
-    bareServer.routeRequest(req, res);
+    try {
+      bareServer.routeRequest(req, res);
+    } catch (err) {
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Bare Server Error');
+      }
+    }
   } else {
     app(req, res);
   }
@@ -28,7 +35,11 @@ server.on('request', (req, res) => {
 // WebSocketのアップグレード処理
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
-    bareServer.routeUpgrade(req, socket, head);
+    try {
+      bareServer.routeUpgrade(req, socket, head);
+    } catch (err) {
+      socket.destroy();
+    }
   } else {
     socket.destroy();
   }
