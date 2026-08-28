@@ -1,4 +1,3 @@
-/* Ultraviolet Client Bundle - Core Engine */
 self.Ultraviolet = self.Ultraviolet || {};
 Ultraviolet.codec = {
     xor: {
@@ -35,7 +34,6 @@ class UVServiceWorker {
     constructor() {}
     async fetch(event) {
         const url = new URL(event.request.url);
-        // プロキシ空間のリクエストを Bare サーバー経由に変換する基本処理
         const bareUrl = '/bare/' + url.pathname.replace(self.__uv$config.prefix, '') + url.search;
         return fetch(bareUrl, {
             method: event.request.method,
