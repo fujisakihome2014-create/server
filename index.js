@@ -8,29 +8,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
+
+// 【超重要】: 引数に app を入れない（二重処理を防ぐ）
+const server = http.createServer();
 
 // Bareサーバーを /bare/ で作成
 const bareServer = createBareServer('/bare/');
 
-// 1. まず /bare/ へのリクエストを明快にインターセプトするミドルウェア
-app.use((req, res, next) => {
+// 静的ファイルの配信
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 唯一のリクエスト処理（ここで初めて振り分ける）
+server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
   } else {
-    next();
+    app(req, res);
   }
 });
 
-// 2. 通常の静的ファイル配信
-app.use(express.static(path.join(__dirname, 'public')));
-
-// 3. WebSocketのアップグレード処理のみイベントリスナーを使用
+// WebSocketのアップグレード処理
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeUpgrade(req, socket, head);
   } else {
-    socket.destroy();
+    socket.end();
   }
 });
 
