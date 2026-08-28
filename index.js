@@ -1,50 +1,48 @@
 import express from 'express';
-import http from 'http';
-import { createBareServer } from '@tomphttp/bare-server-node';
+import { createServer } from 'node:http';
+import { server as wisp } from '@mercuryworkshop/wisp-js/server';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ==========================================
-// 【最重要】プロセスクラッシュを防ぐガード
-// クライアントの通信切断による内部エラーを無視し、サーバーを落とさない
-// ==========================================
-process.on('uncaughtException', (err) => {
-    console.error('Ignored Uncaught Exception:', err.message);
-});
+import { uvPath } from '@titaniumnetwork-dev/ultraviolet';
+import { epoxyPath } from '@mercuryworkshop/epoxy-transport';
+import { baremuxPath } from '@mercuryworkshop/bare-mux/node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const bareServer = createBareServer('/bare/');
 const app = express();
-const server = http.createServer(); // 引数にappは入れない
 
-// 静的ファイルの配信
+// 自前のpublicを最優先で配信(index.html, uv.config.js など)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 該当しないURLには安全に404を返す
+// ベンダー(公式UV/epoxy/bare-mux)の配信ファイル
+app.use('/uv/', express.static(uvPath));
+app.use('/epoxy/', express.static(epoxyPath));
+app.use('/baremux/', express.static(baremuxPath));
+
+// それ以外は404
 app.use((req, res) => {
     res.status(404).send('Not Found');
 });
 
-// Bareサーバーへのルーティング
+const server = createServer();
+
 server.on('request', (req, res) => {
-    if (bareServer.shouldRoute(req)) {
-        bareServer.routeRequest(req, res);
-    } else {
-        app(req, res);
-    }
+    // COOP/COEP: SharedArrayBuffer等を使うepoxy-transportに必要
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    app(req, res);
 });
 
+// WebSocketのアップグレードはWispプロトコルへ
 server.on('upgrade', (req, socket, head) => {
-    if (bareServer.shouldRoute(req)) {
-        bareServer.routeUpgrade(req, socket, head);
+    if (req.url.endsWith('/wisp/')) {
+        wisp.routeRequest(req, socket, head);
     } else {
         socket.end();
     }
 });
 
 const port = process.env.PORT || 10000;
-server.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
+server.listen(port, () => console.log(`Server running on port ${port}`));
