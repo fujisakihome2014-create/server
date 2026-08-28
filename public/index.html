@@ -2,26 +2,46 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Simple Web Proxy</title>
+    <title>Ultraviolet Proxy</title>
+    <!-- Ultravioletに必要なスクリプトを読み込む -->
+    <script src="/uv/uv.bundle.js"></script>
+    <script src="/uv.config.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
     
     <div style="width: 450px; text-align: center; background: #161b22; padding: 30px; border-radius: 8px; border: 1px solid #30363d; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-        <h2 style="margin-top: 0; color: #f0f6fc;">Simple Web Proxy</h2>
+        <h2 style="margin-top: 0; color: #f0f6fc;">Ultraviolet Proxy</h2>
         <input id="url" placeholder="URLを入力 (例: https://example.com)" onkeydown="if(event.key === 'Enter') go();" style="width: 100%; padding: 12px; background: #0d1117; color: #fff; border: 1px solid #30363d; border-radius: 4px; box-sizing: border-box; outline: none; font-size: 14px;" />
         <button onclick="go()" style="width: 100%; padding: 12px; margin-top: 15px; background: #238636; border: none; color: #fff; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px;">アクセスする</button>
     </div>
 
     <script>
-        function go() {
+        // Service Workerの登録
+        window.addEventListener('load', async () => {
+            if ('serviceWorker' in navigator) {
+                try {
+                    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                } catch (err) {
+                    console.error('Service Worker registration failed:', err);
+                }
+            }
+        });
+
+        async function go() {
             let url = document.getElementById('url').value.trim();
             if (!url) return;
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
             
-            // シンプルに /proxy エンドポイントへ飛ばす
-            location.href = '/proxy?url=' + encodeURIComponent(url);
+            // Service Workerが動くまで少し待つか、そのままプレフィックスに飛ばす
+            try {
+                await navigator.serviceWorker.ready;
+                // Ultravioletの設定（prefixとエンコードを使ってURLを変換）
+                location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
+            } catch (err) {
+                alert('Service Workerの準備ができていません。ページを再読み込みしてください。');
+            }
         }
     </script>
 </body>
