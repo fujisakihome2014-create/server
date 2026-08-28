@@ -1,11 +1,18 @@
-importScripts('/uv/uv.bundle.js');
-importScripts('/uv.config.js');
-importScripts('/uv/uv.sw.js');
+"use strict";
 
-const uv = new UVServiceWorker();
+const stockSW = "/uv/sw.js";
+const swAllowedHostnames = ["localhost", "127.0.0.1"];
 
-self.addEventListener('fetch', (event) => {
-    if (event.request.url.startsWith(location.origin + __uv$config.prefix)) {
-        event.respondWith(uv.fetch(event));
+async function registerSW() {
+    if (!navigator.serviceWorker) {
+        if (
+            location.protocol !== "https:" &&
+            !swAllowedHostnames.includes(location.hostname)
+        )
+            throw new Error("Service workers cannot be registered without https.");
+
+        throw new Error("Your browser doesn't support service workers.");
     }
-});
+
+    await navigator.serviceWorker.register(stockSW);
+}
