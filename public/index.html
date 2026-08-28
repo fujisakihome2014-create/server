@@ -63,8 +63,24 @@
         }
 
         .url-bar-wrapper:focus-within {
-          border-color: #38bdf8;
-          box-shadow: 0 0 12px rgba(56, 189, 248, 0.4), 0 0 4px rgba(37, 99, 235, 0.6);
+          border-color: transparent;
+          background-image:
+            linear-gradient(#161b22, #161b22),
+            linear-gradient(135deg, #38bdf8, #60a5fa, #2563eb, #38bdf8);
+          background-origin: border-box;
+          background-clip: padding-box, border-box;
+          background-size: 100% 100%, 300% 300%;
+          box-shadow: 0 0 14px rgba(56, 189, 248, 0.28), 0 0 6px rgba(37, 99, 235, 0.28);
+          animation: gradientDrift 9s ease-in-out infinite;
+        }
+
+        @keyframes gradientDrift {
+          0%   { background-position: 0% 0%, 0% 40%; }
+          22%  { background-position: 0% 0%, 65% 20%; }
+          41%  { background-position: 0% 0%, 30% 80%; }
+          63%  { background-position: 0% 0%, 90% 65%; }
+          80%  { background-position: 0% 0%, 15% 55%; }
+          100% { background-position: 0% 0%, 0% 40%; }
         }
 
         #urlInput {
