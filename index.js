@@ -13,19 +13,10 @@ const server = http.createServer(app);
 // Bareサーバーを /bare/ で作成
 const bareServer = createBareServer('/bare/');
 
-// 静的ファイルの配信と、安全なヘッダー付与を同時に行う
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    // ヘッダーがすでに送信されていないことを確認してから安全に付与
-    if (!res.headersSent) {
-      res.setHeader('Service-Worker-Allowed', '/');
-      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-    }
-  }
-}));
+// ヘッダーのカスタム設定を完全に排除し、純粋に静的ファイルを配信
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ルーティング（Bareサーバーを最優先）
+// HTTPリクエストのルーティング
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -34,6 +25,7 @@ server.on('request', (req, res) => {
   }
 });
 
+// WebSocketのアップグレード処理
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeUpgrade(req, socket, head);
