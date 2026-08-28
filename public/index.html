@@ -3,45 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <title>Ultraviolet Proxy</title>
-    <!-- Ultravioletに必要なスクリプトを読み込む -->
+    <!-- bare-mux / Ultraviolet に必要なスクリプトを読み込む -->
+    <script src="/baremux/index.js"></script>
     <script src="/uv/uv.bundle.js"></script>
-    <script src="/uv.config.js"></script>
+    <script src="/uv/uv.config.js"></script>
 </head>
 <body style="background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-    
+
     <div style="width: 450px; text-align: center; background: #161b22; padding: 30px; border-radius: 8px; border: 1px solid #30363d; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
         <h2 style="margin-top: 0; color: #f0f6fc;">Ultraviolet Proxy</h2>
         <input id="url" placeholder="URLを入力 (例: https://example.com)" onkeydown="if(event.key === 'Enter') go();" style="width: 100%; padding: 12px; background: #0d1117; color: #fff; border: 1px solid #30363d; border-radius: 4px; box-sizing: border-box; outline: none; font-size: 14px;" />
         <button onclick="go()" style="width: 100%; padding: 12px; margin-top: 15px; background: #238636; border: none; color: #fff; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px;">アクセスする</button>
+        <p id="uv-error" style="color: #f85149; font-size: 13px; margin-bottom: 0;"></p>
     </div>
 
+    <script src="/register-sw.js"></script>
     <script>
-        // Service Workerの登録
-        window.addEventListener('load', async () => {
-            if ('serviceWorker' in navigator) {
-                try {
-                    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-                } catch (err) {
-                    console.error('Service Worker registration failed:', err);
-                }
-            }
-        });
+        const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
+        const errorEl = document.getElementById('uv-error');
 
         async function go() {
+            errorEl.textContent = '';
             let url = document.getElementById('url').value.trim();
             if (!url) return;
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
-            
-            // Service Workerが動くまで少し待つか、そのままプレフィックスに飛ばす
+
             try {
-                await navigator.serviceWorker.ready;
-                // Ultravioletの設定（prefixとエンコードを使ってURLを変換）
-                location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
+                await registerSW();
             } catch (err) {
-                alert('Service Workerの準備ができていません。ページを再読み込みしてください。');
+                errorEl.textContent = 'Service Workerの登録に失敗しました: ' + err;
+                return;
             }
+
+            // wisp接続先(このサーバー自身)を transport として設定
+            const wispUrl =
+                (location.protocol === 'https:' ? 'wss' : 'ws') +
+                '://' + location.host + '/wisp/';
+
+            if ((await connection.getTransport()) !== '/epoxy/index.mjs') {
+                await connection.setTransport('/epoxy/index.mjs', [{ wisp: wispUrl }]);
+            }
+
+            location.href = __uv$config.prefix + __uv$config.encodeUrl(url);
         }
     </script>
 </body>
