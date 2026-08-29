@@ -34,9 +34,6 @@ app.use((req, res) => {
 const server = createServer();
 
 server.on('request', (req, res) => {
-    // COOP/COEP: SharedArrayBuffer等を使うepoxy-transportに必要
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     app(req, res);
 });
 
