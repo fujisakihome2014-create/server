@@ -17,7 +17,12 @@ const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ベンダー(公式UV/epoxy/bare-mux)の配信ファイル
-app.use('/uv/', express.static(uvPath));
+app.use('/uv/', (req, res, next) => {
+    // sw.jsのデフォルトスコープ(/uv/配下のみ)をサイト全体に広げる
+    // これにより uv.config.js の prefix を /uv/ の外(例: /url/)にしても動作する
+    res.setHeader('Service-Worker-Allowed', '/');
+    next();
+}, express.static(uvPath));
 app.use('/epoxy/', express.static(epoxyPath));
 app.use('/baremux/', express.static(baremuxPath));
 
