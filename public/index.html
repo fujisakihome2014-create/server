@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proxy Client</title>
-    <!-- bare-mux / Ultraviolet に必要なスクリプトを読み込む -->
+    <!-- bare-mux / Scramjet に必要なスクリプトを読み込む -->
+    <script src="/scram/scramjet.all.js"></script>
     <script src="/baremux/index.js"></script>
-    <script src="/uv/uv.bundle.js"></script>
-    <script src="/uv/uv.config.js"></script>
     <style>
         * {
           box-sizing: border-box;
@@ -271,7 +270,7 @@
             <div class="spinner"></div>
             <div id="statusText">接続中...</div>
         </div>
-        <iframe id="siteFrame" name="siteFrame" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write; presentation"></iframe>
+        <!-- Scramjetのフレームはここに動的に挿入される -->
     </div>
 
     <div id="errorToast">
@@ -328,8 +327,26 @@
         let loadTimeoutTimer = null;
         let isNavigating = false;
 
-        // bare-mux接続(ページを跨いで保持し続ける必要があるため、iframe遷移方式と組み合わせる)
+        // ---- Scramjetの初期化 ----
+        const { ScramjetController } = $scramjetLoadController();
+        const scramjet = new ScramjetController({
+            files: {
+                wasm: '/scram/scramjet.wasm.wasm',
+                all: '/scram/scramjet.all.js',
+                sync: '/scram/scramjet.sync.js',
+            },
+        });
+        scramjet.init();
+
         const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
+
+        // Scramjetのフレームを1つ作り、#viewArea内に配置しておく(以後使い回す)
+        const sjFrame = scramjet.createFrame();
+        sjFrame.frame.id = 'siteFrame';
+        sjFrame.frame.name = 'siteFrame';
+        sjFrame.frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write; presentation');
+        document.getElementById('viewArea').appendChild(sjFrame.frame);
+        sjFrame.frame.addEventListener('load', () => hideLoading());
 
         function showErrorToast(errorText) {
             hideLoading();
@@ -380,8 +397,8 @@
                 (location.protocol === 'https:' ? 'wss' : 'ws') +
                 '://' + location.host + '/wisp/';
 
-            if ((await connection.getTransport()) !== '/epoxy/index.mjs') {
-                await connection.setTransport('/epoxy/index.mjs', [{ wisp: wispUrl }]);
+            if ((await connection.getTransport()) !== '/libcurl/index.mjs') {
+                await connection.setTransport('/libcurl/index.mjs', [{ websocket: wispUrl }]);
             }
         }
 
@@ -415,70 +432,12 @@
                     return;
                 }
 
-                loadWithRetry(url);
+                // Scramjetがエンコード・書き換え処理を内部で全て行ってくれる
+                sjFrame.go(url);
 
             } catch (err) {
                 showErrorToast("予期しないエラーが発生しました: " + err.message);
             }
-        }
-
-        // ---- Wisp接続断(MuxTaskEnded等)の自動検知・再接続 ----
-        let retryCount = 0;
-        const MAX_RETRIES = 2;
-
-        function loadWithRetry(url) {
-            const frame = document.getElementById('siteFrame');
-
-            // __uv$config(uv.config.jsで定義)のエンコード方式を使う
-            const finalProxyUrl = __uv$config.prefix + __uv$config.encodeUrl(url);
-
-            frame.onload = async () => {
-                hideLoading();
-
-                let isUvErrorPage = false;
-                let traceText = '';
-                try {
-                    const doc = frame.contentDocument;
-                    if (doc && doc.getElementById('errorTitle')) {
-                        isUvErrorPage = true;
-                        const traceEl = doc.getElementById('errorTrace');
-                        traceText = traceEl ? traceEl.value : '';
-                    }
-                } catch (e) {
-                    // 同一オリジンでない等でアクセスできない場合は無視(通常のページとみなす)
-                }
-
-                if (isUvErrorPage) {
-                    const isConnectionIssue = /MuxTaskEnded|Wisp|hyper_util|invalid MessagePort/i.test(traceText);
-
-                    if (isConnectionIssue && retryCount < MAX_RETRIES) {
-                        retryCount++;
-                        showLoading();
-                        try {
-                            // 接続を強制的に張り直してから再読み込み
-                            await connection.setTransport('/epoxy/index.mjs', [{
-                                wisp: (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/wisp/'
-                            }]);
-                            frame.src = finalProxyUrl;
-                        } catch (err) {
-                            showErrorToast("再接続に失敗しました: " + err.message);
-                        }
-                        return;
-                    }
-
-                    if (isConnectionIssue) {
-                        showErrorToast("接続が不安定なため読み込みに失敗しました。もう一度お試しください。\n" + traceText);
-                    } else {
-                        showErrorToast(traceText || "ページの読み込みに失敗しました。");
-                    }
-                    return;
-                }
-
-                // 正常に読み込めたのでリトライカウントをリセット
-                retryCount = 0;
-            };
-
-            frame.src = finalProxyUrl;
         }
 
         // 他のページ(Apps Script等)から ?url=<URL> で開かれた場合、
