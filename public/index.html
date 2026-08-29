@@ -66,21 +66,12 @@
           border-color: transparent;
           background-image:
             linear-gradient(#161b22, #161b22),
-            linear-gradient(135deg, #38bdf8, #60a5fa, #2563eb, #38bdf8);
+            linear-gradient(var(--grad-angle, 135deg), var(--grad-c1, #38bdf8), var(--grad-c2, #60a5fa), var(--grad-c3, #2563eb), var(--grad-c4, #38bdf8));
           background-origin: border-box;
           background-clip: padding-box, border-box;
           background-size: 100% 100%, 300% 300%;
           box-shadow: 0 0 14px rgba(56, 189, 248, 0.28), 0 0 6px rgba(37, 99, 235, 0.28);
-          animation: gradientDrift 9s ease-in-out infinite;
-        }
-
-        @keyframes gradientDrift {
-          0%   { background-position: 0% 0%, 0% 40%; }
-          22%  { background-position: 0% 0%, 65% 20%; }
-          41%  { background-position: 0% 0%, 30% 80%; }
-          63%  { background-position: 0% 0%, 90% 65%; }
-          80%  { background-position: 0% 0%, 15% 55%; }
-          100% { background-position: 0% 0%, 0% 40%; }
+          transition: background-image 1.4s ease, background-position 1.4s ease, box-shadow 0.3s ease, border-color 0.3s ease;
         }
 
         #urlInput {
@@ -215,6 +206,19 @@
           max-height: 200px;
           overflow-y: auto;
         }
+
+        /* ?target= で他ページに埋め込まれた時、自分のUIを消して中身だけ全画面表示にする */
+        body.embedded #topBar {
+          display: none;
+        }
+
+        body.embedded #viewArea {
+          margin: 0;
+          border: none;
+          border-radius: 0;
+          height: 100%;
+          width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -231,7 +235,7 @@
             <div class="spinner"></div>
             <div id="statusText">プロキシ経由で接続中...</div>
         </div>
-        <iframe id="siteFrame" name="siteFrame" onload="hideLoading()"></iframe>
+        <iframe id="siteFrame" name="siteFrame"></iframe>
     </div>
 
     <div id="errorToast">
@@ -244,6 +248,46 @@
 
     <script src="/register-sw.js"></script>
     <script>
+        // ---- フォーカス中、枠のグラデーション(青〜水色の範囲内)をランダムに変化させ続ける ----
+        (() => {
+            const palette = ['#1d4ed8', '#2563eb', '#3b82f6', '#38bdf8', '#22d3ee', '#0ea5e9', '#60a5fa'];
+            const wrapper = document.querySelector('.url-bar-wrapper');
+            let gradientTimer = null;
+
+            function pickRandomColors(count) {
+                const shuffled = [...palette].sort(() => Math.random() - 0.5);
+                const picked = [];
+                for (let i = 0; i < count; i++) picked.push(shuffled[i % shuffled.length]);
+                return picked;
+            }
+
+            function randomizeGradient() {
+                const [c1, c2, c3, c4] = pickRandomColors(4);
+                const angle = Math.floor(Math.random() * 360);
+                const posX = Math.floor(Math.random() * 100);
+                const posY = Math.floor(Math.random() * 100);
+
+                wrapper.style.setProperty('--grad-angle', angle + 'deg');
+                wrapper.style.setProperty('--grad-c1', c1);
+                wrapper.style.setProperty('--grad-c2', c2);
+                wrapper.style.setProperty('--grad-c3', c3);
+                wrapper.style.setProperty('--grad-c4', c4);
+                wrapper.style.backgroundPosition = '0% 0%, ' + posX + '% ' + posY + '%';
+            }
+
+            document.getElementById('urlInput').addEventListener('focus', () => {
+                randomizeGradient();
+                gradientTimer = setInterval(randomizeGradient, 1600);
+            });
+
+            document.getElementById('urlInput').addEventListener('blur', () => {
+                if (gradientTimer) {
+                    clearInterval(gradientTimer);
+                    gradientTimer = null;
+                }
+            });
+        })();
+
         let errorTimer = null;
         let loadTimeoutTimer = null;
         let isNavigating = false;
@@ -335,14 +379,83 @@
                     return;
                 }
 
-                // __uv$config(uv.config.jsで定義)のエンコード方式を使う
-                const finalProxyUrl = __uv$config.prefix + __uv$config.encodeUrl(url);
-                document.getElementById('siteFrame').src = finalProxyUrl;
+                loadWithRetry(url);
 
             } catch (err) {
                 showErrorToast("予期しないエラーが発生しました: " + err.message);
             }
         }
+
+        // ---- Wisp接続断(MuxTaskEnded等)の自動検知・再接続 ----
+        let retryCount = 0;
+        const MAX_RETRIES = 2;
+
+        function loadWithRetry(url) {
+            const frame = document.getElementById('siteFrame');
+
+            // __uv$config(uv.config.jsで定義)のエンコード方式を使う
+            const finalProxyUrl = __uv$config.prefix + __uv$config.encodeUrl(url);
+
+            frame.onload = async () => {
+                hideLoading();
+
+                let isUvErrorPage = false;
+                let traceText = '';
+                try {
+                    const doc = frame.contentDocument;
+                    if (doc && doc.getElementById('errorTitle')) {
+                        isUvErrorPage = true;
+                        const traceEl = doc.getElementById('errorTrace');
+                        traceText = traceEl ? traceEl.value : '';
+                    }
+                } catch (e) {
+                    // 同一オリジンでない等でアクセスできない場合は無視(通常のページとみなす)
+                }
+
+                if (isUvErrorPage) {
+                    const isConnectionIssue = /MuxTaskEnded|Wisp|hyper_util|invalid MessagePort/i.test(traceText);
+
+                    if (isConnectionIssue && retryCount < MAX_RETRIES) {
+                        retryCount++;
+                        showLoading();
+                        try {
+                            // 接続を強制的に張り直してから再読み込み
+                            await connection.setTransport('/epoxy/index.mjs', [{
+                                wisp: (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/wisp/'
+                            }]);
+                            frame.src = finalProxyUrl;
+                        } catch (err) {
+                            showErrorToast("再接続に失敗しました: " + err.message);
+                        }
+                        return;
+                    }
+
+                    if (isConnectionIssue) {
+                        showErrorToast("接続が不安定なため読み込みに失敗しました。もう一度お試しください。\n" + traceText);
+                    } else {
+                        showErrorToast(traceText || "ページの読み込みに失敗しました。");
+                    }
+                    return;
+                }
+
+                // 正常に読み込めたのでリトライカウントをリセット
+                retryCount = 0;
+            };
+
+            frame.src = finalProxyUrl;
+        }
+
+        // 他のページ(Apps Script等)から ?target=<URL> で開かれた場合、
+        // 自分のUIは隠して自動でその中身だけを読み込む
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(location.search);
+            const target = params.get('target');
+            if (target) {
+                document.body.classList.add('embedded');
+                document.getElementById('urlInput').value = target;
+                goProxy();
+            }
+        });
     </script>
 </body>
 </html>
