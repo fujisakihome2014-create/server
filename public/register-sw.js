@@ -1,6 +1,6 @@
 "use strict";
 
-const stockSW = "/uv/sw.js";
+const stockSW = "/sw.js";
 const swAllowedHostnames = ["localhost", "127.0.0.1"];
 
 async function registerSW() {
@@ -14,5 +14,5 @@ async function registerSW() {
         throw new Error("Your browser doesn't support service workers.");
     }
 
-    await navigator.serviceWorker.register(stockSW, { scope: "/" });
+    await navigator.serviceWorker.register(stockSW);
 }
