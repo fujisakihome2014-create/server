@@ -207,7 +207,7 @@
           overflow-y: auto;
         }
 
-        /* ?target= で他ページに埋め込まれた時、自分のUIを消して中身だけ全画面表示にする */
+        /* ?url= で他ページに埋め込まれた時、自分のUIを消して中身だけ全画面表示にする */
         body.embedded #topBar {
           display: none;
         }
@@ -445,11 +445,11 @@
             frame.src = finalProxyUrl;
         }
 
-        // 他のページ(Apps Script等)から ?target=<URL> で開かれた場合、
+        // 他のページ(Apps Script等)から ?url=<URL> で開かれた場合、
         // 自分のUIは隠して自動でその中身だけを読み込む
         window.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(location.search);
-            const target = params.get('target');
+            const target = params.get('url');
             if (target) {
                 document.body.classList.add('embedded');
                 document.getElementById('urlInput').value = target;
