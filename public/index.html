@@ -48,6 +48,32 @@
           flex: 1;
         }
 
+        @property --grad-angle {
+          syntax: '<angle>';
+          inherits: false;
+          initial-value: 135deg;
+        }
+        @property --grad-c1 {
+          syntax: '<color>';
+          inherits: false;
+          initial-value: #38bdf8;
+        }
+        @property --grad-c2 {
+          syntax: '<color>';
+          inherits: false;
+          initial-value: #60a5fa;
+        }
+        @property --grad-c3 {
+          syntax: '<color>';
+          inherits: false;
+          initial-value: #2563eb;
+        }
+        @property --grad-c4 {
+          syntax: '<color>';
+          inherits: false;
+          initial-value: #38bdf8;
+        }
+
         .url-bar-wrapper {
           position: relative;
           background-color: #161b22;
@@ -59,7 +85,7 @@
           height: 44px;
           width: 100%;
           box-shadow: 0 1px 0 rgba(27, 31, 36, 0.04);
-          transition: all 0.3s ease;
+          transition: box-shadow 0.3s ease, border-color 0.3s ease;
         }
 
         .url-bar-wrapper:focus-within {
@@ -71,7 +97,15 @@
           background-clip: padding-box, border-box;
           background-size: 100% 100%, 300% 300%;
           box-shadow: 0 0 14px rgba(56, 189, 248, 0.28), 0 0 6px rgba(37, 99, 235, 0.28);
-          transition: background-image 1.4s ease, background-position 1.4s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+          transition:
+            --grad-angle 1.6s ease,
+            --grad-c1 1.6s ease,
+            --grad-c2 1.6s ease,
+            --grad-c3 1.6s ease,
+            --grad-c4 1.6s ease,
+            background-position 1.6s ease,
+            box-shadow 0.3s ease,
+            border-color 0.3s ease;
         }
 
         #urlInput {
@@ -158,14 +192,15 @@
           position: absolute;
           top: 16px;
           right: 16px;
-          background: rgba(248, 81, 73, 0.15);
-          border: 1px solid rgba(248, 81, 73, 0.4);
-          color: #f85149;
+          background: linear-gradient(135deg, rgba(127, 29, 29, 0.35), rgba(69, 10, 10, 0.55));
+          border: 1px solid rgba(248, 113, 113, 0.45);
+          color: #fecaca;
           padding: 12px 16px;
           border-radius: 6px;
           font-size: 13px;
           z-index: 1000;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+          box-shadow: 0 4px 20px rgba(127, 29, 29, 0.35);
+          backdrop-filter: blur(6px);
           opacity: 0;
           visibility: hidden;
           transform: translateY(-15px);
@@ -185,21 +220,23 @@
           justify-content: space-between;
           align-items: center;
           font-weight: bold;
+          color: #fca5a5;
           margin-bottom: 6px;
-          border-bottom: 1px solid rgba(248, 81, 73, 0.3);
+          border-bottom: 1px solid rgba(248, 113, 113, 0.3);
           padding-bottom: 4px;
         }
 
         .error-time {
           font-size: 11px;
-          color: #8b949e;
+          color: #f0a8a8;
           font-weight: normal;
+          opacity: 0.8;
         }
 
         .error-detail {
           font-family: monospace;
           font-size: 11px;
-          color: #ff7b72;
+          color: #fed7d7;
           word-break: break-all;
           white-space: pre-wrap;
           line-height: 1.4;
@@ -233,7 +270,7 @@
     <div id="viewArea">
         <div id="overlay">
             <div class="spinner"></div>
-            <div id="statusText">プロキシ経由で接続中...</div>
+            <div id="statusText">接続中...</div>
         </div>
         <iframe id="siteFrame" name="siteFrame"></iframe>
     </div>
