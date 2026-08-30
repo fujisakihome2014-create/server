@@ -29,13 +29,158 @@
           to { opacity: 1; }
         }
 
+        /* ---- タブストリップ ---- */
+        #tabStrip {
+          position: relative;
+          display: flex;
+          align-items: flex-end;
+          gap: 4px;
+          padding: 8px 12px 0 12px;
+          overflow-x: auto;
+          scrollbar-width: thin;
+        }
+
+        .tab-indicator {
+          position: absolute;
+          bottom: 0;
+          height: 2px;
+          border-radius: 2px;
+          background: linear-gradient(90deg, #38bdf8, #60a5fa, #2563eb, #22d3ee, #38bdf8);
+          background-size: 300% 100%;
+          opacity: 0;
+          pointer-events: none;
+          transition: left 0.32s cubic-bezier(0.4, 0, 0.2, 1), width 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+          animation: tabIndicatorFlow 5s linear infinite;
+        }
+
+        .tab-indicator.visible {
+          opacity: 1;
+        }
+
+        @keyframes tabIndicatorFlow {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 300% 50%; }
+        }
+
+        .tab {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #161b22;
+          border: 1px solid #30363d;
+          border-bottom: none;
+          border-radius: 6px 6px 0 0;
+          padding: 7px 8px 7px 12px;
+          font-size: 12px;
+          color: #8b949e;
+          cursor: pointer;
+          max-width: 170px;
+          min-width: 90px;
+          white-space: nowrap;
+          flex: none;
+          transform-origin: bottom center;
+          transition: background 0.2s ease, color 0.2s ease, border-color 0.25s ease,
+            transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease,
+            max-width 0.25s ease, min-width 0.25s ease, padding 0.25s ease, margin 0.25s ease;
+        }
+
+        .tab.tab-enter {
+          animation: tabPopIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes tabPopIn {
+          from { transform: scale(0.8) translateY(6px); opacity: 0; }
+          to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .tab.tab-exit {
+          max-width: 0 !important;
+          min-width: 0 !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+          margin-left: -4px;
+          opacity: 0;
+          transform: scale(0.85);
+          pointer-events: none;
+        }
+
+        .tab:hover {
+          background: #1c2128;
+        }
+
+        .tab.active {
+          background: #161b22;
+          color: #f0f6fc;
+          border-color: #30363d;
+        }
+
+        .tab-title {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .tab-close {
+          flex: none;
+          width: 16px;
+          height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          opacity: 0.6;
+          font-size: 12px;
+        }
+
+        .tab-close:hover {
+          opacity: 1;
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-loading-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #38bdf8;
+          flex: none;
+          animation: pulseDot 1s ease-in-out infinite;
+        }
+
+        @keyframes pulseDot {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+
+        #newTabBtn {
+          flex: none;
+          width: 28px;
+          height: 28px;
+          margin-bottom: 2px;
+          background: transparent;
+          border: 1px dashed #30363d;
+          border-radius: 6px;
+          color: #8b949e;
+          cursor: pointer;
+          font-size: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        #newTabBtn:hover {
+          background: #161b22;
+          color: #f0f6fc;
+        }
+
+        /* ---- アドレスバー行 ---- */
         #topBar {
           display: flex;
           flex-direction: row;
           align-items: center;
           width: 100%;
           gap: 8px;
-          padding: 12px;
+          padding: 8px 12px 12px 12px;
           background: #0d1117;
           z-index: 100;
           position: relative;
@@ -45,6 +190,7 @@
           display: flex;
           align-items: center;
           flex: 1;
+          min-width: 0;
         }
 
         @property --grad-angle {
@@ -121,26 +267,79 @@
           color: #6e7681;
         }
 
+        /* ---- ナビゲーションボタン(サイト表示中に右から滑らかに現れる) ---- */
+        #navButtons {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          width: 0;
+          overflow: hidden;
+          opacity: 0;
+          flex: none;
+          transition: width 0.35s ease, opacity 0.25s ease;
+        }
+
+        #navButtons.visible {
+          width: 228px;
+          opacity: 1;
+          margin-left: 8px;
+        }
+
+        #navButtons button {
+          flex: none;
+          width: 36px;
+          height: 36px;
+          background: #161b22;
+          border: 1px solid #30363d;
+          border-radius: 6px;
+          color: #c9d1d9;
+          cursor: pointer;
+          font-size: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+        }
+
+        #navButtons button:hover:not(:disabled) {
+          background: #21262d;
+          color: #f0f6fc;
+        }
+
+        #navButtons button:disabled {
+          opacity: 0.35;
+          cursor: default;
+        }
+
+        #btnCloseSite {
+          color: #fca5a5 !important;
+        }
+
+        /* ---- 表示エリア ---- */
         #viewArea {
           position: relative;
-          height: calc(100% - 68px);
+          height: calc(100% - 116px);
           width: calc(100% - 24px);
           margin: 0 12px 12px 12px;
           background-color: #161b22;
           border: 1px solid #30363d;
           border-radius: 6px;
           overflow: hidden;
-          display: flex;
-          flex-direction: column;
         }
 
-        #siteFrame {
+        .tab-frame-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+
+        .tab-frame-container iframe {
           width: 100%;
           height: 100%;
           border: none;
           background-color: #161b22;
-          position: relative;
-          z-index: 2;
         }
 
         #overlay {
@@ -185,6 +384,7 @@
         #statusText {
           font-size: 13px;
           color: #c9d1d9;
+          transition: opacity 0.15s ease;
         }
 
         #errorToast {
@@ -224,6 +424,19 @@
           padding-bottom: 4px;
         }
 
+        .error-kind {
+          display: inline-block;
+          font-size: 10px;
+          font-weight: bold;
+          letter-spacing: 0.03em;
+          background: rgba(248, 113, 113, 0.2);
+          border: 1px solid rgba(248, 113, 113, 0.4);
+          border-radius: 4px;
+          padding: 1px 6px;
+          margin-right: 6px;
+          color: #fecaca;
+        }
+
         .error-time {
           font-size: 11px;
           color: #fca5a5;
@@ -243,6 +456,10 @@
         }
 
         /* ?url= で他ページに埋め込まれた時、自分のUIを消して中身だけ全画面表示にする */
+        body.embedded #tabStrip {
+          display: none;
+        }
+
         body.embedded #topBar {
           display: none;
         }
@@ -257,10 +474,22 @@
     </style>
 </head>
 <body>
+    <div id="tabStrip">
+        <div id="tabIndicator" class="tab-indicator"></div>
+        <button id="newTabBtn" title="新しいタブ">＋</button>
+    </div>
+
     <div id="topBar">
         <div id="urlForm">
             <div class="url-bar-wrapper">
                 <input id="urlInput" placeholder="URLまたは検索ワードを入力" onkeydown="if(event.key === 'Enter') goProxy();" autocomplete="off" spellcheck="false" />
+            </div>
+            <div id="navButtons">
+                <button id="btnBack" title="戻る">◀</button>
+                <button id="btnForward" title="進む">▶</button>
+                <button id="btnReload" title="更新">⟳</button>
+                <button id="btnFullscreen" title="全画面表示">⛶</button>
+                <button id="btnCloseSite" title="サイトを閉じる">✕</button>
             </div>
         </div>
     </div>
@@ -270,12 +499,12 @@
             <div class="spinner"></div>
             <div id="statusText">接続中...</div>
         </div>
-        <!-- Scramjetのフレームはここに動的に挿入される -->
+        <!-- タブごとのScramjetフレームはここに動的に挿入される -->
     </div>
 
     <div id="errorToast">
         <div class="error-header">
-            <span>⚠️ システム・リソースエラー通知</span>
+            <span><span id="errorKind" class="error-kind">ERROR</span>システム・リソースエラー通知</span>
             <span id="errorTime" class="error-time"></span>
         </div>
         <div id="errorDetail" class="error-detail"></div>
@@ -323,11 +552,7 @@
             });
         })();
 
-        let errorTimer = null;
-        let loadTimeoutTimer = null;
-        let isNavigating = false;
-
-        // ---- Scramjetの初期化 ----
+        // ---- Scramjetの初期化(全タブで共有) ----
         const { ScramjetController } = $scramjetLoadController();
         const scramjet = new ScramjetController({
             files: {
@@ -339,53 +564,235 @@
         scramjet.init();
 
         const connection = new BareMux.BareMuxConnection('/baremux/worker.js');
+        let transportReady = false;
 
-        // Scramjetのフレームを1つ作り、#viewArea内に配置しておく(以後使い回す)
-        const sjFrame = scramjet.createFrame();
-        sjFrame.frame.id = 'siteFrame';
-        sjFrame.frame.name = 'siteFrame';
-        sjFrame.frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write; presentation');
-        document.getElementById('viewArea').appendChild(sjFrame.frame);
-        sjFrame.frame.addEventListener('load', () => hideLoading());
+        async function ensureTransportReady(onStage) {
+            if (!transportReady) {
+                onStage && onStage('Service Workerを準備中...');
+                await registerSW();
 
-        // ---- 親ページ(Apps Script等)との連携 ----
-        // 親ページに現在の状態を細かく通知する
+                onStage && onStage('通信経路を確立中...');
+                const wispUrl =
+                    (location.protocol === 'https:' ? 'wss' : 'ws') +
+                    '://' + location.host + '/wisp/';
+
+                if ((await connection.getTransport()) !== '/libcurl/index.mjs') {
+                    await connection.setTransport('/libcurl/index.mjs', [{ websocket: wispUrl }]);
+                }
+                transportReady = true;
+            }
+        }
+
+        // ---- 親ページ(Apps Script等)との連携(埋め込みモード時のみ意味を持つ) ----
         function notifyParent(payload) {
             if (window.parent !== window) {
                 window.parent.postMessage(Object.assign({ type: 'sj-status' }, payload), '*');
             }
         }
 
-        // 親ページからの操作コマンド(戻る/進む/更新)を受け付ける
+        // 親ページからの操作コマンド(戻る/進む/更新) : 埋め込み時はアクティブタブに適用
         window.addEventListener('message', (event) => {
             const data = event.data;
             if (!data || data.type !== 'sj-cmd') return;
+            const tab = getActiveTab();
+            if (!tab) return;
             switch (data.action) {
-                case 'back':
-                    sjFrame.back();
-                    break;
-                case 'forward':
-                    sjFrame.forward();
-                    break;
-                case 'reload':
-                    sjFrame.reload();
-                    break;
+                case 'back': tab.sjFrame.back(); break;
+                case 'forward': tab.sjFrame.forward(); break;
+                case 'reload': tab.sjFrame.reload(); break;
             }
         });
 
-        sjFrame.addEventListener('urlchange', (e) => {
-            notifyParent({ state: 'urlchange', url: e.url || '' });
-        });
+        // =====================================================================
+        // タブ管理
+        // =====================================================================
+        let tabs = [];
+        let activeTabId = null;
+        let tabCounter = 0;
+        let errorTimer = null;
+        let loadTimeoutTimer = null;
 
-        function showErrorToast(errorText) {
-            hideLoading();
+        function hostnameOf(url) {
+            try { return new URL(url).hostname; } catch (e) { return url || '新しいタブ'; }
+        }
+
+        function getActiveTab() {
+            return tabs.find(t => t.id === activeTabId) || null;
+        }
+
+        function createTabElement(tab) {
+            const el = document.createElement('div');
+            el.className = 'tab tab-enter';
+            el.addEventListener('animationend', () => el.classList.remove('tab-enter'), { once: true });
+            el.onclick = () => switchTab(tab.id);
+
+            const dot = document.createElement('span');
+            dot.className = 'tab-loading-dot';
+            dot.style.display = 'none';
+            el.appendChild(dot);
+
+            const title = document.createElement('span');
+            title.className = 'tab-title';
+            title.textContent = tab.title;
+            el.appendChild(title);
+
+            const closeBtn = document.createElement('span');
+            closeBtn.className = 'tab-close';
+            closeBtn.textContent = '✕';
+            closeBtn.onclick = (e) => closeTab(tab.id, e);
+            el.appendChild(closeBtn);
+
+            el._dot = dot;
+            el._title = title;
+            return el;
+        }
+
+        function updateTabElement(tab) {
+            if (!tab.el) return;
+            tab.el.classList.toggle('active', tab.id === activeTabId);
+            tab.el._dot.style.display = tab.loading ? 'block' : 'none';
+            tab.el._title.textContent = tab.title;
+        }
+
+        function updateIndicatorPosition() {
+            const indicator = document.getElementById('tabIndicator');
+            const tab = getActiveTab();
+            if (!tab || !tab.el) {
+                indicator.classList.remove('visible');
+                return;
+            }
+            indicator.style.left = tab.el.offsetLeft + 'px';
+            indicator.style.width = tab.el.offsetWidth + 'px';
+            indicator.classList.add('visible');
+        }
+
+        // タブの出現/消滅アニメーション中は、他タブの位置が連続的に動くため
+        // 一定時間、毎フレーム位置を測り直して下線を追従させる
+        function trackIndicatorDuring(durationMs) {
+            const start = performance.now();
+            function step(now) {
+                updateIndicatorPosition();
+                if (now - start < durationMs) {
+                    requestAnimationFrame(step);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        function createTab(initialUrl) {
+            const id = 'tab' + (++tabCounter);
+
+            const container = document.createElement('div');
+            container.className = 'tab-frame-container';
+            container.style.display = 'none';
+            document.getElementById('viewArea').appendChild(container);
+
+            const sjFrame = scramjet.createFrame();
+            sjFrame.frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write; presentation');
+            container.appendChild(sjFrame.frame);
+
+            const tab = { id, sjFrame, container, url: '', title: '新しいタブ', loading: false, loaded: false };
+
+            sjFrame.frame.addEventListener('load', () => endLoading(tab));
+            sjFrame.addEventListener('urlchange', (e) => {
+                tab.url = e.url || tab.url;
+                tab.title = hostnameOf(tab.url);
+                updateTabElement(tab);
+                requestAnimationFrame(updateIndicatorPosition);
+                if (tab.id === activeTabId) {
+                    document.getElementById('urlInput').value = tab.url;
+                    notifyParent({ state: 'urlchange', url: tab.url });
+                }
+            });
+
+            tab.el = createTabElement(tab);
+            document.getElementById('tabStrip').insertBefore(tab.el, document.getElementById('newTabBtn'));
+
+            tabs.push(tab);
+            switchTab(id);
+            trackIndicatorDuring(340);
+
+            if (initialUrl) {
+                document.getElementById('urlInput').value = initialUrl;
+                loadInTab(tab, initialUrl);
+            }
+            return tab;
+        }
+
+        function closeTab(id, evt) {
+            if (evt) evt.stopPropagation();
+            const idx = tabs.findIndex(t => t.id === id);
+            if (idx === -1) return;
+
+            const tab = tabs[idx];
+            tab.el.classList.add('tab-exit');
+            setTimeout(() => { if (tab.el.isConnected) tab.el.remove(); }, 320);
+            trackIndicatorDuring(340);
+
+            tab.container.remove();
+            tabs.splice(idx, 1);
+
+            if (activeTabId === id) {
+                if (tabs.length) {
+                    switchTab(tabs[Math.max(0, idx - 1)].id);
+                } else {
+                    createTab();
+                }
+            }
+        }
+
+        function switchTab(id) {
+            activeTabId = id;
+            tabs.forEach(t => {
+                t.container.style.display = (t.id === id) ? 'block' : 'none';
+                updateTabElement(t);
+            });
+
+            const tab = getActiveTab();
+            document.getElementById('errorToast').classList.remove('active');
+            if (loadTimeoutTimer) { clearTimeout(loadTimeoutTimer); loadTimeoutTimer = null; }
+
+            if (!tab) return;
+
+            document.getElementById('urlInput').value = tab.url || '';
+            setNavButtonsVisible(tab.loaded);
+            document.getElementById('overlay').classList.toggle('active', !!tab.loading);
+
+            requestAnimationFrame(updateIndicatorPosition);
+        }
+
+        window.addEventListener('resize', () => requestAnimationFrame(updateIndicatorPosition));
+
+        function setNavButtonsVisible(visible) {
+            document.getElementById('navButtons').classList.toggle('visible', !!visible);
+        }
+
+        // =====================================================================
+        // ステータス / エラー表示
+        // =====================================================================
+        function setStatus(text) {
+            const el = document.getElementById('statusText');
+            el.style.opacity = '0';
+            setTimeout(() => {
+                el.textContent = text;
+                el.style.opacity = '1';
+            }, 120);
+        }
+
+        function showErrorToast(kind, errorText) {
+            const tab = getActiveTab();
+            if (tab) { tab.loading = false; updateTabElement(tab); }
+            document.getElementById('overlay').classList.remove('active');
+            if (loadTimeoutTimer) { clearTimeout(loadTimeoutTimer); loadTimeoutTimer = null; }
+
             const errorToast = document.getElementById('errorToast');
+            const errorKind = document.getElementById('errorKind');
             const errorDetail = document.getElementById('errorDetail');
             const errorTime = document.getElementById('errorTime');
 
             const now = new Date();
             errorTime.textContent = now.toLocaleTimeString();
-
+            errorKind.textContent = kind || 'ERROR';
             errorDetail.textContent = errorText;
             errorToast.classList.add('active');
 
@@ -397,59 +804,69 @@
             }, 15000);
         }
 
-        function showLoading(stage) {
-            isNavigating = true;
-            document.getElementById('overlay').classList.add('active');
-            if (stage) {
-                document.getElementById('statusText').textContent = stage;
+        function beginLoading(tab, stageLabel) {
+            tab.loading = true;
+            updateTabElement(tab);
+            if (tab.id === activeTabId) {
+                document.getElementById('errorToast').classList.remove('active');
+                document.getElementById('overlay').classList.add('active');
+                setStatus(stageLabel || '接続中...');
+                notifyParent({ state: 'loading', stage: stageLabel || '接続中...' });
             }
-            notifyParent({ state: 'loading', stage: stage || '接続中...' });
 
             if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
             loadTimeoutTimer = setTimeout(() => {
-                if (isNavigating) {
-                    showErrorToast("TimeoutError: 15秒以内にサーバーから応答がありませんでした。");
-                    isNavigating = false;
+                if (tab.loading) {
+                    tab.loading = false;
+                    updateTabElement(tab);
+                    if (tab.id === activeTabId) {
+                        showErrorToast('TIMEOUT', 'サーバーから20秒以内に応答がありませんでした。読み込みが重いか、サーバーがスリープから復帰中の可能性があります。');
+                    }
                 }
-            }, 15000);
+            }, 20000);
         }
 
-        function hideLoading() {
-            isNavigating = false;
-            document.getElementById('overlay').classList.remove('active');
-            if (loadTimeoutTimer) {
-                clearTimeout(loadTimeoutTimer);
-                loadTimeoutTimer = null;
-            }
-            notifyParent({ state: 'loaded', url: sjFrame.url ? String(sjFrame.url) : '' });
-        }
-
-        async function ensureTransportReady() {
-            showLoading('Service Workerを準備中...');
-            // Service Workerを登録
-            await registerSW();
-
-            showLoading('通信経路を確立中...');
-            // wisp接続先(このサーバー自身)をtransportとして設定
-            const wispUrl =
-                (location.protocol === 'https:' ? 'wss' : 'ws') +
-                '://' + location.host + '/wisp/';
-
-            if ((await connection.getTransport()) !== '/libcurl/index.mjs') {
-                await connection.setTransport('/libcurl/index.mjs', [{ websocket: wispUrl }]);
+        function endLoading(tab) {
+            tab.loading = false;
+            tab.loaded = true;
+            updateTabElement(tab);
+            requestAnimationFrame(updateIndicatorPosition);
+            if (tab.id === activeTabId) {
+                document.getElementById('overlay').classList.remove('active');
+                setNavButtonsVisible(true);
+                if (loadTimeoutTimer) { clearTimeout(loadTimeoutTimer); loadTimeoutTimer = null; }
+                notifyParent({ state: 'loaded', url: tab.sjFrame.url ? String(tab.sjFrame.url) : '' });
             }
         }
 
-        async function goProxy() {
+        // =====================================================================
+        // 実際にサイトを開く
+        // =====================================================================
+        async function loadInTab(tab, url) {
+            tab.loaded = false;
+            beginLoading(tab, '接続を初期化しています...');
+
             try {
-                document.getElementById('errorToast').classList.remove('active');
-                if (errorTimer) clearTimeout(errorTimer);
+                await ensureTransportReady((stage) => beginLoading(tab, stage));
+            } catch (err) {
+                showErrorToast('TRANSPORT', '接続の初期化に失敗しました: ' + err.message);
+                return;
+            }
+
+            beginLoading(tab, 'ページを読み込み中...');
+            tab.sjFrame.go(url);
+        }
+
+        function goProxy() {
+            try {
+                let tab = getActiveTab();
+                if (!tab) tab = createTab();
 
                 let rawInput = document.getElementById('urlInput').value;
                 let url = rawInput.trim();
 
                 if (!url) {
-                    showErrorToast("ValidationError: URL入力欄が空です。");
+                    showErrorToast('INPUT', 'URL入力欄が空です。URLまたは検索ワードを入力してください。');
                     return;
                 }
 
@@ -461,34 +878,73 @@
                     }
                 }
 
-                showLoading('接続を初期化しています...');
-
-                try {
-                    await ensureTransportReady();
-                } catch (err) {
-                    showErrorToast("TransportError: 接続の初期化に失敗しました。" + err.message);
-                    return;
-                }
-
-                showLoading('ページを読み込み中...');
-
-                // Scramjetがエンコード・書き換え処理を内部で全て行ってくれる
-                sjFrame.go(url);
+                loadInTab(tab, url);
 
             } catch (err) {
-                showErrorToast("UnknownError: 予期しないエラーが発生しました。" + err.message);
+                showErrorToast('UNKNOWN', '予期しないエラーが発生しました: ' + err.message);
             }
         }
 
+        // =====================================================================
+        // ナビゲーションボタン
+        // =====================================================================
+        document.getElementById('btnBack').addEventListener('click', () => {
+            const tab = getActiveTab();
+            if (tab) tab.sjFrame.back();
+        });
+
+        document.getElementById('btnForward').addEventListener('click', () => {
+            const tab = getActiveTab();
+            if (tab) tab.sjFrame.forward();
+        });
+
+        document.getElementById('btnReload').addEventListener('click', () => {
+            const tab = getActiveTab();
+            if (!tab) return;
+            beginLoading(tab, '再読み込み中...');
+            tab.sjFrame.reload();
+        });
+
+        document.getElementById('btnFullscreen').addEventListener('click', () => {
+            const tab = getActiveTab();
+            if (!tab) return;
+            if (tab.container.requestFullscreen) {
+                tab.container.requestFullscreen().catch(() => {
+                    showErrorToast('FULLSCREEN', '全画面表示に対応していない環境です。');
+                });
+            }
+        });
+
+        document.getElementById('btnCloseSite').addEventListener('click', () => {
+            const tab = getActiveTab();
+            if (!tab) return;
+            tab.sjFrame.frame.src = 'about:blank';
+            tab.loaded = false;
+            tab.loading = false;
+            tab.url = '';
+            tab.title = '新しいタブ';
+            setNavButtonsVisible(false);
+            updateTabElement(tab);
+            requestAnimationFrame(updateIndicatorPosition);
+            document.getElementById('urlInput').value = '';
+            document.getElementById('urlInput').focus();
+        });
+
+        document.getElementById('newTabBtn').addEventListener('click', () => createTab());
+
+        // =====================================================================
+        // 初期化
         // 他のページ(Apps Script等)から ?url=<URL> で開かれた場合、
-        // 自分のUIは隠して自動でその中身だけを読み込む
+        // 自分のUI(タブバー含む)は隠して自動でその中身だけを読み込む
+        // =====================================================================
         window.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(location.search);
             const target = params.get('url');
             if (target) {
                 document.body.classList.add('embedded');
-                document.getElementById('urlInput').value = target;
-                goProxy();
+                createTab(target);
+            } else {
+                createTab();
             }
         });
     </script>
