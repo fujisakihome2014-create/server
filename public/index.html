@@ -348,6 +348,35 @@
         document.getElementById('viewArea').appendChild(sjFrame.frame);
         sjFrame.frame.addEventListener('load', () => hideLoading());
 
+        // ---- 親ページ(Apps Script等)との連携 ----
+        // 親ページに現在の状態を細かく通知する
+        function notifyParent(payload) {
+            if (window.parent !== window) {
+                window.parent.postMessage(Object.assign({ type: 'sj-status' }, payload), '*');
+            }
+        }
+
+        // 親ページからの操作コマンド(戻る/進む/更新)を受け付ける
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            if (!data || data.type !== 'sj-cmd') return;
+            switch (data.action) {
+                case 'back':
+                    sjFrame.back();
+                    break;
+                case 'forward':
+                    sjFrame.forward();
+                    break;
+                case 'reload':
+                    sjFrame.reload();
+                    break;
+            }
+        });
+
+        sjFrame.addEventListener('urlchange', (e) => {
+            notifyParent({ state: 'urlchange', url: e.url || '' });
+        });
+
         function showErrorToast(errorText) {
             hideLoading();
             const errorToast = document.getElementById('errorToast');
@@ -360,20 +389,26 @@
             errorDetail.textContent = errorText;
             errorToast.classList.add('active');
 
+            notifyParent({ state: 'error', message: errorText });
+
             if (errorTimer) clearTimeout(errorTimer);
             errorTimer = setTimeout(() => {
                 errorToast.classList.remove('active');
             }, 15000);
         }
 
-        function showLoading() {
+        function showLoading(stage) {
             isNavigating = true;
             document.getElementById('overlay').classList.add('active');
+            if (stage) {
+                document.getElementById('statusText').textContent = stage;
+            }
+            notifyParent({ state: 'loading', stage: stage || '接続中...' });
 
             if (loadTimeoutTimer) clearTimeout(loadTimeoutTimer);
             loadTimeoutTimer = setTimeout(() => {
                 if (isNavigating) {
-                    showErrorToast("タイムアウト: 15秒以内にサーバーから応答がありませんでした。");
+                    showErrorToast("TimeoutError: 15秒以内にサーバーから応答がありませんでした。");
                     isNavigating = false;
                 }
             }, 15000);
@@ -386,12 +421,15 @@
                 clearTimeout(loadTimeoutTimer);
                 loadTimeoutTimer = null;
             }
+            notifyParent({ state: 'loaded', url: sjFrame.url ? String(sjFrame.url) : '' });
         }
 
         async function ensureTransportReady() {
+            showLoading('Service Workerを準備中...');
             // Service Workerを登録
             await registerSW();
 
+            showLoading('通信経路を確立中...');
             // wisp接続先(このサーバー自身)をtransportとして設定
             const wispUrl =
                 (location.protocol === 'https:' ? 'wss' : 'ws') +
@@ -423,20 +461,22 @@
                     }
                 }
 
-                showLoading();
+                showLoading('接続を初期化しています...');
 
                 try {
                     await ensureTransportReady();
                 } catch (err) {
-                    showErrorToast("接続の初期化に失敗しました: " + err.message);
+                    showErrorToast("TransportError: 接続の初期化に失敗しました。" + err.message);
                     return;
                 }
+
+                showLoading('ページを読み込み中...');
 
                 // Scramjetがエンコード・書き換え処理を内部で全て行ってくれる
                 sjFrame.go(url);
 
             } catch (err) {
-                showErrorToast("予期しないエラーが発生しました: " + err.message);
+                showErrorToast("UnknownError: 予期しないエラーが発生しました。" + err.message);
             }
         }
 
