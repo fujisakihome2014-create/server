@@ -691,9 +691,9 @@
             sjFrame.frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write; presentation');
             container.appendChild(sjFrame.frame);
 
-            const tab = { id, sjFrame, container, url: '', title: '新しいタブ', loading: false, loaded: false };
+            const tab = { id, sjFrame, container, url: '', title: '新しいタブ', loading: false, loaded: false, retries: 0 };
 
-            sjFrame.frame.addEventListener('load', () => endLoading(tab));
+            sjFrame.frame.addEventListener('load', () => handleFrameLoad(tab));
             sjFrame.addEventListener('urlchange', (e) => {
                 tab.url = e.url || tab.url;
                 tab.title = hostnameOf(tab.url);
@@ -837,6 +837,47 @@
                 if (loadTimeoutTimer) { clearTimeout(loadTimeoutTimer); loadTimeoutTimer = null; }
                 notifyParent({ state: 'loaded', url: tab.sjFrame.url ? String(tab.sjFrame.url) : '' });
             }
+        }
+
+        const MAX_LOAD_RETRIES = 2;
+
+        function handleFrameLoad(tab) {
+            let isErrorPage = false;
+            let errorMessage = '';
+            try {
+                const doc = tab.sjFrame.frame.contentDocument;
+                const h1 = doc && doc.querySelector('h1');
+                if (h1 && h1.textContent.includes('Uh oh!')) {
+                    isErrorPage = true;
+                    const pre = doc.body.innerText || '';
+                    errorMessage = pre.slice(0, 400);
+                }
+            } catch (e) {
+                // 別オリジン等で中身が見えない場合は通常ページとみなす
+            }
+
+            if (isErrorPage && /wasm not loaded yet/i.test(errorMessage) && tab.retries < MAX_LOAD_RETRIES) {
+                tab.retries++;
+                if (tab.id === activeTabId) {
+                    setStatus('接続を再試行しています...');
+                }
+                setTimeout(() => {
+                    if (tab.url) tab.sjFrame.go(tab.url);
+                }, 800);
+                return;
+            }
+
+            if (isErrorPage) {
+                tab.retries = 0;
+                if (tab.id === activeTabId) {
+                    showErrorToast('SCRAMJET', errorMessage || 'ページの読み込みでエラーが発生しました。');
+                }
+                endLoading(tab);
+                return;
+            }
+
+            tab.retries = 0;
+            endLoading(tab);
         }
 
         // =====================================================================
