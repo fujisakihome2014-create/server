@@ -853,16 +853,24 @@
             let errorMessage = '';
             try {
                 const doc = tab.sjFrame.frame.contentDocument;
-                const bodyText = (doc && doc.body && doc.body.innerText) || '';
-                if (bodyText.includes('Uh oh!') || bodyText.includes('There was an error loading')) {
+                // innerTextはJSでの後書き込み前だと空のことがあるため、
+                // パース済みの生HTMLソース(outerHTML)から直接判定する
+                const rawHtml = (doc && doc.documentElement && doc.documentElement.outerHTML) || '';
+                if (rawHtml.includes('Uh oh!') || rawHtml.includes('There was an error loading')) {
                     isErrorPage = true;
-                    errorMessage = bodyText.slice(0, 500);
+                    errorMessage = rawHtml;
                 }
             } catch (e) {
                 // 中身が見えない場合(別オリジン等)は通常ページとみなす
             }
 
-            if (isErrorPage && /wasm not loaded yet/i.test(errorMessage) && tab.retries < MAX_LOAD_RETRIES) {
+            let decodedHtml = errorMessage;
+            try { decodedHtml = decodeURIComponent(errorMessage); } catch (e) {}
+            const isWasmRaceError =
+                /wasm not loaded yet/i.test(errorMessage) ||
+                /wasm not loaded yet/i.test(decodedHtml);
+
+            if (isErrorPage && isWasmRaceError && tab.retries < MAX_LOAD_RETRIES) {
                 tab.retries++;
                 if (tab.id === activeTabId) {
                     setStatus('接続を再試行しています...(' + tab.retries + '/' + MAX_LOAD_RETRIES + ')');
@@ -876,7 +884,14 @@
             if (isErrorPage) {
                 tab.retries = 0;
                 if (tab.id === activeTabId) {
-                    showErrorToast('SCRAMJET', errorMessage || 'ページの読み込みでエラーが発生しました。');
+                    // 表示用にラベル付きの詳細を抽出できれば使う。できなければ汎用メッセージ。
+                    let displayMessage = 'ページの読み込みでエラーが発生しました。';
+                    try {
+                        const doc = tab.sjFrame.frame.contentDocument;
+                        const bodyText = (doc && doc.body && doc.body.innerText) || '';
+                        if (bodyText.includes('Message:')) displayMessage = bodyText.slice(0, 500);
+                    } catch (e) {}
+                    showErrorToast('SCRAMJET', displayMessage);
                 }
                 endLoading(tab);
                 return;
