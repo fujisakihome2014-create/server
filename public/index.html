@@ -835,7 +835,14 @@
                 document.getElementById('overlay').classList.remove('active');
                 setNavButtonsVisible(true);
                 if (loadTimeoutTimer) { clearTimeout(loadTimeoutTimer); loadTimeoutTimer = null; }
-                notifyParent({ state: 'loaded', url: tab.sjFrame.url ? String(tab.sjFrame.url) : '' });
+
+                let currentUrl = '';
+                try {
+                    currentUrl = tab.sjFrame.url ? String(tab.sjFrame.url) : '';
+                } catch (e) {
+                    // エラーページ表示中などはurl取得自体が失敗することがあるので無視
+                }
+                notifyParent({ state: 'loaded', url: currentUrl });
             }
         }
 
@@ -846,24 +853,23 @@
             let errorMessage = '';
             try {
                 const doc = tab.sjFrame.frame.contentDocument;
-                const h1 = doc && doc.querySelector('h1');
-                if (h1 && h1.textContent.includes('Uh oh!')) {
+                const bodyText = (doc && doc.body && doc.body.innerText) || '';
+                if (bodyText.includes('Uh oh!') || bodyText.includes('There was an error loading')) {
                     isErrorPage = true;
-                    const pre = doc.body.innerText || '';
-                    errorMessage = pre.slice(0, 400);
+                    errorMessage = bodyText.slice(0, 500);
                 }
             } catch (e) {
-                // 別オリジン等で中身が見えない場合は通常ページとみなす
+                // 中身が見えない場合(別オリジン等)は通常ページとみなす
             }
 
             if (isErrorPage && /wasm not loaded yet/i.test(errorMessage) && tab.retries < MAX_LOAD_RETRIES) {
                 tab.retries++;
                 if (tab.id === activeTabId) {
-                    setStatus('接続を再試行しています...');
+                    setStatus('接続を再試行しています...(' + tab.retries + '/' + MAX_LOAD_RETRIES + ')');
                 }
                 setTimeout(() => {
                     if (tab.url) tab.sjFrame.go(tab.url);
-                }, 800);
+                }, 1000);
                 return;
             }
 
