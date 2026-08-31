@@ -89,8 +89,8 @@
         }
 
         @keyframes tabPopIn {
-          from { transform: scale(0.8) translateY(6px); opacity: 0; }
-          to { transform: scale(1) translateY(0); opacity: 1; }
+          from { transform: scale(0.85); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
         }
 
         .tab.tab-exit {
@@ -242,15 +242,21 @@
           background-clip: padding-box, border-box;
           background-size: 100% 100%, 300% 300%;
           box-shadow: 0 0 14px rgba(56, 189, 248, 0.28), 0 0 6px rgba(37, 99, 235, 0.28);
+          animation: urlBarGradientFlow 7s ease-in-out infinite;
           transition:
             --grad-angle 1.6s ease,
             --grad-c1 1.6s ease,
             --grad-c2 1.6s ease,
             --grad-c3 1.6s ease,
             --grad-c4 1.6s ease,
-            background-position 1.6s ease,
             box-shadow 0.3s ease,
             border-color 0.3s ease;
+        }
+
+        @keyframes urlBarGradientFlow {
+          0%   { background-position: 0% 0%, 0% 50%; }
+          50%  { background-position: 0% 0%, 100% 50%; }
+          100% { background-position: 0% 0%, 0% 50%; }
         }
 
         #urlInput {
@@ -265,6 +271,28 @@
 
         #urlInput::placeholder {
           color: #6e7681;
+        }
+
+        #serverModeToggle {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex: none;
+          margin-left: 8px;
+          padding: 0 10px;
+          height: 44px;
+          font-size: 11px;
+          color: #8b949e;
+          white-space: nowrap;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        #serverModeToggle input[type="checkbox"] {
+          accent-color: #38bdf8;
+          width: 14px;
+          height: 14px;
+          cursor: pointer;
         }
 
         /* ---- ナビゲーションボタン(サイト表示中に右から滑らかに現れる) ---- */
@@ -484,9 +512,13 @@
             <div class="url-bar-wrapper">
                 <input id="urlInput" placeholder="URLまたは検索ワードを入力" onkeydown="if(event.key === 'Enter') goProxy();" autocomplete="off" spellcheck="false" />
             </div>
+            <label id="serverModeToggle" title="サーバー側でページを取得します(学習用・簡易実装。JS主体のサイトは動きません)">
+                <input type="checkbox" id="serverModeCheckbox" />
+                <span>サーバーモード</span>
+            </label>
             <div id="navButtons">
-                <button id="btnBack" title="戻る">◀</button>
-                <button id="btnForward" title="進む">▶</button>
+                <button id="btnBack" title="戻る">←</button>
+                <button id="btnForward" title="進む">→</button>
                 <button id="btnReload" title="更新">⟳</button>
                 <button id="btnFullscreen" title="全画面表示">⛶</button>
                 <button id="btnCloseSite" title="サイトを閉じる">✕</button>
@@ -528,15 +560,12 @@
             function randomizeGradient() {
                 const [c1, c2, c3, c4] = pickRandomColors(4);
                 const angle = Math.floor(Math.random() * 360);
-                const posX = Math.floor(Math.random() * 100);
-                const posY = Math.floor(Math.random() * 100);
 
                 wrapper.style.setProperty('--grad-angle', angle + 'deg');
                 wrapper.style.setProperty('--grad-c1', c1);
                 wrapper.style.setProperty('--grad-c2', c2);
                 wrapper.style.setProperty('--grad-c3', c3);
                 wrapper.style.setProperty('--grad-c4', c4);
-                wrapper.style.backgroundPosition = '0% 0%, ' + posX + '% ' + posY + '%';
             }
 
             document.getElementById('urlInput').addEventListener('focus', () => {
@@ -906,6 +935,20 @@
         // =====================================================================
         async function loadInTab(tab, url) {
             tab.loaded = false;
+            const serverMode = document.getElementById('serverModeCheckbox').checked;
+
+            if (serverMode) {
+                // 学習用の簡易サーバーサイドモード: Scramjetを使わず、
+                // サーバーが取得・書き換えたHTMLをそのままiframeで表示する
+                beginLoading(tab, 'サーバーがページを取得中...(簡易実装)');
+                tab.url = url;
+                tab.title = hostnameOf(url);
+                updateTabElement(tab);
+                requestAnimationFrame(updateIndicatorPosition);
+                tab.sjFrame.frame.src = '/fetch/' + encodeURIComponent(url);
+                return;
+            }
+
             beginLoading(tab, '接続を初期化しています...');
 
             try {
