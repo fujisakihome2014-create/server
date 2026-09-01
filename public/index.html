@@ -34,7 +34,6 @@
           position: relative;
           display: flex;
           align-items: flex-end;
-          gap: 4px;
           padding: 8px 12px 0 12px;
           overflow-x: auto;
           scrollbar-width: thin;
@@ -66,22 +65,23 @@
           display: flex;
           align-items: center;
           gap: 6px;
+          height: 32px;
+          width: 150px;
           background: #161b22;
           border: 1px solid #30363d;
           border-bottom: none;
           border-radius: 6px 6px 0 0;
-          padding: 7px 8px 7px 12px;
+          padding: 0 8px 0 12px;
+          margin-right: 4px;
           font-size: 12px;
           color: #8b949e;
           cursor: pointer;
-          max-width: 170px;
-          min-width: 90px;
           white-space: nowrap;
           flex: none;
           transform-origin: bottom center;
           transition: background 0.2s ease, color 0.2s ease, border-color 0.25s ease,
             transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease,
-            max-width 0.25s ease, min-width 0.25s ease, padding 0.25s ease, margin 0.25s ease;
+            width 0.25s ease, padding 0.25s ease, margin 0.25s ease;
         }
 
         .tab.tab-enter {
@@ -94,11 +94,10 @@
         }
 
         .tab.tab-exit {
-          max-width: 0 !important;
-          min-width: 0 !important;
+          width: 0 !important;
           padding-left: 0 !important;
           padding-right: 0 !important;
-          margin-left: -4px;
+          margin-right: 0 !important;
           opacity: 0;
           transform: scale(0.85);
           pointer-events: none;
@@ -112,6 +111,13 @@
           background: #161b22;
           color: #f0f6fc;
           border-color: #30363d;
+        }
+
+        .tab-favicon {
+          width: 14px;
+          height: 14px;
+          flex: none;
+          border-radius: 2px;
         }
 
         .tab-title {
@@ -154,8 +160,7 @@
         #newTabBtn {
           flex: none;
           width: 28px;
-          height: 28px;
-          margin-bottom: 2px;
+          height: 32px;
           background: transparent;
           border: 1px dashed #30363d;
           border-radius: 6px;
@@ -276,7 +281,7 @@
         #serverModeToggle {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           flex: none;
           margin-left: 8px;
           padding: 0 10px;
@@ -288,11 +293,47 @@
           user-select: none;
         }
 
+        /* input自体は見えなくして、隣接するspanをスイッチの見た目にする */
         #serverModeToggle input[type="checkbox"] {
-          accent-color: #38bdf8;
-          width: 14px;
-          height: 14px;
-          cursor: pointer;
+          position: absolute;
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .toggle-switch {
+          position: relative;
+          flex: none;
+          width: 38px;
+          height: 22px;
+          border-radius: 999px;
+          background: #30363d;
+          transition: background 0.3s ease;
+        }
+
+        .toggle-switch::before {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: #f0f6fc;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+          transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #serverModeCheckbox:checked + .toggle-switch {
+          background: linear-gradient(90deg, #38bdf8, #2563eb);
+        }
+
+        #serverModeCheckbox:checked + .toggle-switch::before {
+          transform: translateX(16px);
+        }
+
+        #serverModeCheckbox:focus-visible + .toggle-switch {
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.5);
         }
 
         /* ---- ナビゲーションボタン(サイト表示中に右から滑らかに現れる) ---- */
@@ -323,10 +364,11 @@
           color: #c9d1d9;
           cursor: pointer;
           font-size: 15px;
+          line-height: 1;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+          transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
         }
 
         #navButtons button:hover:not(:disabled) {
@@ -338,6 +380,12 @@
           opacity: 0.35;
           cursor: default;
         }
+
+        #btnBack:hover:not(:disabled) { transform: translateX(-2px); }
+        #btnForward:hover:not(:disabled) { transform: translateX(2px); }
+        #btnReload:hover:not(:disabled) { transform: rotate(360deg); }
+        #btnFullscreen:hover:not(:disabled) { transform: scale(1.15); }
+        #btnCloseSite:hover:not(:disabled) { transform: scale(1.15); }
 
         #btnCloseSite {
           color: #fca5a5 !important;
@@ -441,6 +489,19 @@
           transform: translateY(0);
         }
 
+        .error-close-btn {
+          cursor: pointer;
+          opacity: 0.7;
+          font-size: 11px;
+          padding: 2px 4px;
+          border-radius: 4px;
+        }
+
+        .error-close-btn:hover {
+          opacity: 1;
+          background: rgba(255, 255, 255, 0.1);
+        }
+
         .error-header {
           display: flex;
           justify-content: space-between;
@@ -488,6 +549,10 @@
           display: none;
         }
 
+        body.embedded #errorToast {
+          display: none;
+        }
+
         body.embedded #topBar {
           display: none;
         }
@@ -514,6 +579,7 @@
             </div>
             <label id="serverModeToggle" title="サーバー側でページを取得します(学習用・簡易実装。JS主体のサイトは動きません)">
                 <input type="checkbox" id="serverModeCheckbox" />
+                <span class="toggle-switch"></span>
                 <span>サーバーモード</span>
             </label>
             <div id="navButtons">
@@ -537,7 +603,10 @@
     <div id="errorToast">
         <div class="error-header">
             <span><span id="errorKind" class="error-kind">ERROR</span>システム・リソースエラー通知</span>
-            <span id="errorTime" class="error-time"></span>
+            <span style="display:flex;align-items:center;gap:8px;">
+                <span id="errorTime" class="error-time"></span>
+                <span id="errorCloseBtn" class="error-close-btn">✕</span>
+            </span>
         </div>
         <div id="errorDetail" class="error-detail"></div>
     </div>
@@ -660,6 +729,12 @@
             dot.style.display = 'none';
             el.appendChild(dot);
 
+            const favicon = document.createElement('img');
+            favicon.className = 'tab-favicon';
+            favicon.style.display = 'none';
+            favicon.onerror = () => { favicon.style.display = 'none'; };
+            el.appendChild(favicon);
+
             const title = document.createElement('span');
             title.className = 'tab-title';
             title.textContent = tab.title;
@@ -672,6 +747,7 @@
             el.appendChild(closeBtn);
 
             el._dot = dot;
+            el._favicon = favicon;
             el._title = title;
             return el;
         }
@@ -681,6 +757,12 @@
             tab.el.classList.toggle('active', tab.id === activeTabId);
             tab.el._dot.style.display = tab.loading ? 'block' : 'none';
             tab.el._title.textContent = tab.title;
+            if (tab.favicon && !tab.loading) {
+                tab.el._favicon.src = tab.favicon;
+                tab.el._favicon.style.display = 'block';
+            } else {
+                tab.el._favicon.style.display = 'none';
+            }
         }
 
         function updateIndicatorPosition() {
@@ -706,6 +788,16 @@
                 }
             }
             requestAnimationFrame(step);
+        }
+
+        // 新規タブ作成時: 前のタブの下線を一旦フェードアウトさせてから、
+        // 新しいタブの位置でフェードインさせる
+        function fadeIndicatorForNewTab() {
+            const indicator = document.getElementById('tabIndicator');
+            indicator.classList.remove('visible');
+            setTimeout(() => {
+                updateIndicatorPosition();
+            }, 260);
         }
 
         function createTab(initialUrl) {
@@ -739,7 +831,7 @@
 
             tabs.push(tab);
             switchTab(id);
-            trackIndicatorDuring(340);
+            fadeIndicatorForNewTab();
 
             if (initialUrl) {
                 document.getElementById('urlInput').value = initialUrl;
@@ -875,7 +967,7 @@
             }
         }
 
-        const MAX_LOAD_RETRIES = 2;
+        const MAX_LOAD_RETRIES = 4;
 
         function handleFrameLoad(tab) {
             let isErrorPage = false;
@@ -906,7 +998,7 @@
                 }
                 setTimeout(() => {
                     if (tab.url) tab.sjFrame.go(tab.url);
-                }, 1000);
+                }, 1500);
                 return;
             }
 
@@ -927,7 +1019,50 @@
             }
 
             tab.retries = 0;
+            captureTabMeta(tab);
             endLoading(tab);
+        }
+
+        // 実際のページの<title>とfaviconを拾ってタブに反映する。
+        // SPA等でタイトルが後から動的に変わるケースにも追従する。
+        function captureTabMeta(tab) {
+            let doc;
+            try {
+                doc = tab.sjFrame.frame.contentDocument;
+            } catch (e) {
+                return;
+            }
+            if (!doc) return;
+
+            const applyTitle = () => {
+                const t = (doc.title || '').trim();
+                tab.title = t || hostnameOf(tab.url);
+                updateTabElement(tab);
+                requestAnimationFrame(updateIndicatorPosition);
+                if (tab.id === activeTabId) notifyParent({ state: 'meta', title: tab.title });
+            };
+            applyTitle();
+
+            const applyFavicon = () => {
+                try {
+                    const link = doc.querySelector('link[rel~="icon"]');
+                    tab.favicon = link && link.href ? link.href : '';
+                } catch (e) {
+                    tab.favicon = '';
+                }
+                updateTabElement(tab);
+                if (tab.id === activeTabId) notifyParent({ state: 'meta', favicon: tab.favicon });
+            };
+            applyFavicon();
+
+            // 既存の監視があれば解除してから張り直す(ページ遷移のたびに呼ばれるため)
+            if (tab.titleObserver) tab.titleObserver.disconnect();
+            try {
+                tab.titleObserver = new MutationObserver(applyTitle);
+                tab.titleObserver.observe(doc.querySelector('head') || doc, { subtree: true, childList: true, characterData: true });
+            } catch (e) {
+                // 監視できない場合は初回取得のみで諦める
+            }
         }
 
         // =====================================================================
@@ -950,6 +1085,10 @@
             }
 
             beginLoading(tab, '接続を初期化しています...');
+            tab.url = url;
+            tab.title = hostnameOf(url);
+            updateTabElement(tab);
+            requestAnimationFrame(updateIndicatorPosition);
 
             try {
                 await ensureTransportReady((stage) => beginLoading(tab, stage));
@@ -1036,6 +1175,39 @@
         });
 
         document.getElementById('newTabBtn').addEventListener('click', () => createTab());
+
+        document.getElementById('errorCloseBtn').addEventListener('click', () => {
+            document.getElementById('errorToast').classList.remove('active');
+            if (errorTimer) clearTimeout(errorTimer);
+        });
+
+        // ---- キーボードショートカット ----
+        window.addEventListener('keydown', (e) => {
+            const mod = e.ctrlKey || e.metaKey;
+            if (!mod) return;
+
+            if (e.key === 't' || e.key === 'T') {
+                e.preventDefault();
+                createTab();
+            } else if (e.key === 'w' || e.key === 'W') {
+                e.preventDefault();
+                const tab = getActiveTab();
+                if (tab) closeTab(tab.id);
+            } else if (e.key === 'l' || e.key === 'L') {
+                e.preventDefault();
+                const input = document.getElementById('urlInput');
+                input.focus();
+                input.select();
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                if (tabs.length < 2) return;
+                const idx = tabs.findIndex(t => t.id === activeTabId);
+                const nextIdx = e.shiftKey
+                    ? (idx - 1 + tabs.length) % tabs.length
+                    : (idx + 1) % tabs.length;
+                switchTab(tabs[nextIdx].id);
+            }
+        });
 
         // =====================================================================
         // 初期化
