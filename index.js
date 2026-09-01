@@ -116,6 +116,45 @@ function rewriteSrcset(value, baseUrl) {
 //  method=GETのフォームだけ action を書き換えず素通しし、
 //  代わりに hidden input で本来の遷移先を持たせる簡易対応は行わない。
 //  ここではPOSTフォームの正しい転送を優先する)
+// 実行時のfetch/XHR/動的なsrc・href代入を/fetch/経由に差し替える注入スクリプト。
+// location.href直接代入やWebSocketは対象外(ブラウザ仕様上インターセプトが困難なため)。
+function buildShim(finalUrl) {
+    return '<script>(function(){' +
+        'var __BASE__=' + JSON.stringify(finalUrl) + ';' +
+        'function toFetchUrl(u){' +
+        'if(!u)return u;' +
+        'try{' +
+        'if(/^(data:|blob:|javascript:|#|about:|\\/fetch\\/)/i.test(u))return u;' +
+        'return "/fetch/"+encodeURIComponent(new URL(u,__BASE__).href);' +
+        '}catch(e){return u;}' +
+        '}' +
+        'var oF=window.fetch;' +
+        'window.fetch=function(i,init){' +
+        'if(typeof i==="string")i=toFetchUrl(i);' +
+        'else if(i&&i.url)i=new Request(toFetchUrl(i.url),i);' +
+        'return oF.call(this,i,init);' +
+        '};' +
+        'var oO=XMLHttpRequest.prototype.open;' +
+        'XMLHttpRequest.prototype.open=function(m,u){' +
+        'arguments[1]=toFetchUrl(u);' +
+        'return oO.apply(this,arguments);' +
+        '};' +
+        '["src","href"].forEach(function(p){' +
+        '[window.HTMLImageElement,window.HTMLScriptElement,window.HTMLLinkElement,window.HTMLIFrameElement,window.HTMLSourceElement].forEach(function(C){' +
+        'if(!C)return;' +
+        'var d=Object.getOwnPropertyDescriptor(C.prototype,p)||Object.getOwnPropertyDescriptor(HTMLElement.prototype,p)||Object.getOwnPropertyDescriptor(Element.prototype,p);' +
+        'if(!d||!d.set)return;' +
+        'Object.defineProperty(C.prototype,p,{get:d.get,configurable:true,set:function(v){d.set.call(this,toFetchUrl(v));}});' +
+        '});' +
+        '});' +
+        'var oS=Element.prototype.setAttribute;' +
+        'Element.prototype.setAttribute=function(n,v){' +
+        'if((n==="src"||n==="href")&&v)v=toFetchUrl(v);' +
+        'return oS.call(this,n,v);' +
+        '};' +
+        '})();</' + 'script>';
+}
+
 async function fetchTarget(target, sessionId, method, body, contentType) {
     const hostname = new URL(target).hostname;
     const headers = { ...BROWSER_HEADERS };
@@ -184,6 +223,11 @@ async function handleProxyRequest(req, res, method) {
             html = rewriteAttr(html, 'href');
             html = rewriteAttr(html, 'src');
             html = rewriteAttr(html, 'srcset');
+
+            const shim = buildShim(finalUrl);
+            html = /<head[^>]*>/i.test(html)
+                ? html.replace(/<head[^>]*>/i, (m) => m + shim)
+                : shim + html;
 
             // <form action="..." method="post"> のactionは書き換えず、
             // 素のターゲットURLを data-fetch-target に保持しておき、
